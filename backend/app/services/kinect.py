@@ -28,6 +28,7 @@ class KinectService:
         self._running = False
         self._latest_rgb: Optional[np.ndarray] = None
         self._latest_depth: Optional[np.ndarray] = None
+        self._latest_registered_depth: Optional[np.ndarray] = None
 
         # Recording state
         self._recording = False
@@ -62,6 +63,11 @@ class KinectService:
             with self._lock:
                 self._latest_rgb = rgb
                 self._latest_depth = depth
+                # Register depth to RGB coordinate system
+                if HAS_FREENECT:
+                    self._latest_registered_depth = self._register_depth_to_rgb(depth, rgb)
+                else:
+                    self._latest_registered_depth = depth
                 if self._recording and self._rgb_writer and self._depth_writer:
                     self._rgb_writer.write(rgb)
                     depth_vis = cv2.convertScaleAbs(depth, alpha=0.03)
@@ -94,6 +100,11 @@ class KinectService:
     def get_latest(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         with self._lock:
             return self._latest_rgb, self._latest_depth
+    
+    def get_latest_registered(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """Get the latest RGB and depth frames with depth registered to RGB coordinates."""
+        with self._lock:
+            return self._latest_rgb, self._latest_registered_depth
 
     def _find_next_take_number(self) -> int:
         take_number = 1
@@ -157,5 +168,71 @@ class KinectService:
             cv2.imwrite(os.path.join(img_dir, "depth.png"), depth_vis)
             np.save(os.path.join(img_dir, "depth_raw.npy"), self._latest_depth)
             return img_dir
+
+    def _register_depth_to_rgb(self, depth: np.ndarray, rgb: np.ndarray) -> np.ndarray:
+        """Register depth data to RGB coordinate system using freenect registration."""
+        if not HAS_FREENECT:
+            return depth
+        
+        try:
+            # Use freenect's built-in registration function
+            # This maps depth pixels to RGB coordinates
+            registered_depth = freenect.registration.depth_to_rgb(depth)
+            return registered_depth.astype(np.uint16)
+        except Exception as e:
+            print(f"Registration failed: {e}")
+            # Fallback: return original depth
+            return depth
+
+    def create_alignment_verification_image(self) -> Optional[np.ndarray]:
+        """Create a visualization to verify RGB/depth alignment."""
+        with self._lock:
+            if self._latest_rgb is None or self._latest_registered_depth is None:
+                return None
+            
+            # Create a visualization showing both RGB and depth overlaid
+            rgb_copy = self._latest_rgb.copy()
+            depth_vis = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
+            
+            # Create a colored depth map
+            depth_colored = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
+            
+            # Blend RGB and depth (50% each)
+            blended = cv2.addWeighted(rgb_copy, 0.5, depth_colored, 0.5, 0)
+            
+            return blended
+
+    def verify_alignment_accuracy(self) -> dict:
+        """Verify the accuracy of RGB/depth alignment using edge detection."""
+        with self._lock:
+            if self._latest_rgb is None or self._latest_registered_depth is None:
+                return {"error": "No frames available"}
+            
+            # Convert to grayscale for edge detection
+            rgb_gray = cv2.cvtColor(self._latest_rgb, cv2.COLOR_BGR2GRAY)
+            depth_gray = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
+            
+            # Apply edge detection
+            rgb_edges = cv2.Canny(rgb_gray, 50, 150)
+            depth_edges = cv2.Canny(depth_gray, 50, 150)
+            
+            # Calculate edge correlation
+            correlation = cv2.matchTemplate(rgb_edges, depth_edges, cv2.TM_CCOEFF_NORMED)[0][0]
+            
+            # Count edge pixels
+            rgb_edge_count = np.sum(rgb_edges > 0)
+            depth_edge_count = np.sum(depth_edges > 0)
+            
+            # Calculate edge overlap
+            edge_overlap = cv2.bitwise_and(rgb_edges, depth_edges)
+            overlap_count = np.sum(edge_overlap > 0)
+            
+            return {
+                "correlation": float(correlation),
+                "rgb_edges": int(rgb_edge_count),
+                "depth_edges": int(depth_edge_count),
+                "overlap_edges": int(overlap_count),
+                "overlap_percentage": float(overlap_count / max(rgb_edge_count, depth_edge_count, 1) * 100)
+            }
 
 
