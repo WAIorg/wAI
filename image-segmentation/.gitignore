@@ -1,2 +1,6 @@
 sam_vit_h.pth
 yolov8n.pt
+venv
+.DS_Store
+images/
+outputs/
