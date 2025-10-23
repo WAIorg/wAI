@@ -12,6 +12,41 @@ except Exception:
     HAS_FREENECT = False
 
 import cv2
+fx_d, fy_d = 596.25827383, 593.35350108
+cx_d, cy_d = 328.00224565, 246.72323964
+
+dist_d = np.array([
+    -5.75632759e-01,
+     5.48853727e+00,
+     3.71853753e-04,
+     4.57792568e-03,
+    -1.60971539e+01
+])
+
+# === RGB Camera Intrinsics ===
+fx_rgb, fy_rgb = 501.3380852, 501.37135837
+cx_rgb, cy_rgb = 326.20427782, 232.10061073
+
+dist_rgb = np.array([
+    -6.09913528e-02,
+     6.20838340e-01,
+    -9.85993593e-03,
+     1.61211809e-03,
+    -1.98825568e+00
+])
+
+# === Stereo Extrinsics (IR → RGB) ===
+R = np.array([
+    [ 0.99987482, -0.00253275,  0.01561793],
+    [ 0.00218294,  0.99974728,  0.02237451],
+    [-0.01567065, -0.02233761,  0.99962766]
+])
+
+T = np.array([
+    [-0.02644189],
+    [-0.00027204],
+    [-0.01232775]
+])
 
 
 class KinectService:
@@ -169,20 +204,72 @@ class KinectService:
             np.save(os.path.join(img_dir, "depth_raw.npy"), self._latest_depth)
             return img_dir
 
-    def _register_depth_to_rgb(self, depth: np.ndarray, rgb: np.ndarray) -> np.ndarray:
-        """Register depth data to RGB coordinate system using freenect registration."""
-        if not HAS_FREENECT:
-            return depth
-        
-        try:
-            # Use freenect's built-in registration function
-            # This maps depth pixels to RGB coordinates
-            registered_depth = freenect.registration.depth_to_rgb(depth)
-            return registered_depth.astype(np.uint16)
-        except Exception as e:
-            print(f"Registration failed: {e}")
-            # Fallback: return original depth
-            return depth
+    def _register_depth_to_rgb(self, depth, rgb):
+        """
+        Register depth map to RGB image using full intrinsic + extrinsic + distortion correction.
+        Returns a depth map aligned to RGB coordinates.
+        """
+        height, width = depth.shape
+
+        # Prepare depth pixel grid
+        i, j = np.meshgrid(np.arange(width), np.arange(height))
+        pixels = np.stack((i, j), axis=-1).reshape(-1, 1, 2).astype(np.float32)  # Nx1x2
+
+        # Undistort depth pixels to normalized camera coordinates
+        depth_points_norm = cv2.undistortPoints(
+            pixels,
+            cameraMatrix=np.array([[fx_d, 0, cx_d],
+                                [0, fy_d, cy_d],
+                                [0, 0, 1]], dtype=np.float32),
+            distCoeffs=dist_d
+        )  # Nx1x2
+
+        # Convert normalized coordinates to 3D points in depth camera frame
+        z = depth.flatten().astype(np.float32)
+        x = depth_points_norm[:, 0, 0] * z
+        y = depth_points_norm[:, 0, 1] * z
+        points_3d = np.stack((x, y, z), axis=-1).T  # 3xN
+
+        # Transform points to RGB camera frame
+        points_rgb = (R @ points_3d + T).T  # Nx3
+
+        # Project into RGB image plane
+        x_rgb = points_rgb[:, 0] / points_rgb[:, 2]
+        y_rgb = points_rgb[:, 1] / points_rgb[:, 2]
+        pixels_rgb = cv2.projectPoints(
+            np.zeros((points_rgb.shape[0], 3), dtype=np.float32),  # dummy 3D points
+            rvec=np.zeros(3), tvec=np.zeros(3),
+            cameraMatrix=np.array([[fx_rgb, 0, cx_rgb],
+                                [0, fy_rgb, cy_rgb],
+                                [0, 0, 1]], dtype=np.float32),
+            distCoeffs=dist_rgb,
+            # override 3D points manually
+        )[0]  # Nx1x2
+
+        # Instead, use direct pinhole projection with distortion
+        # OpenCV recommends using cv2.projectPoints with actual 3D points
+        pixels_rgb, _ = cv2.projectPoints(
+            points_rgb.astype(np.float32),
+            rvec=np.zeros(3),
+            tvec=np.zeros(3),
+            cameraMatrix=np.array([[fx_rgb, 0, cx_rgb],
+                                [0, fy_rgb, cy_rgb],
+                                [0, 0, 1]], dtype=np.float32),
+            distCoeffs=dist_rgb
+        )
+
+        pixels_rgb = pixels_rgb.reshape(-1, 2)
+
+        # Initialize registered depth map
+        registered_depth = np.zeros_like(depth, dtype=np.uint16)
+
+        # Filter valid points inside image
+        u = np.round(pixels_rgb[:, 0]).astype(np.int32)
+        v = np.round(pixels_rgb[:, 1]).astype(np.int32)
+        valid = (u >= 0) & (u < width) & (v >= 0) & (v < height)
+        registered_depth[v[valid], u[valid]] = depth.flatten()[valid]
+
+        return registered_depth
 
     def create_alignment_verification_image(self) -> Optional[np.ndarray]:
         """Create a visualization to verify RGB/depth alignment."""
