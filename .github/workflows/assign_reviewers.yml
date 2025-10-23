@@ -12,7 +12,5 @@ jobs:
       - name: Auto-assign reviewers
         uses: kentaro-m/auto-assign-action@v2.0.0
         with:
-          addReviewers: true
-          reviewers: 'mackenziesnyder,adeleyounis,alexisbader,gavin2178'
-          numberOfReviewers: 4
+          configuration-path: '.github/auto_assign.yml'
 
