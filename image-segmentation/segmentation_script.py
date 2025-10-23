@@ -70,11 +70,33 @@ def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint):
 
     return person_segmentation
 
+def so_no_head(img_rgb, person_segmentation):
+    gray = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
+    person_mask_cv2 = (person_segmentation.astype(np.uint8)) * 255
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+    (x, y, w, h) = faces[0]
+    
+    padding = int(0.1 * h)
+    y1 = max(0, y - padding)
+    y2 = min(person_mask_cv2.shape[0], y + h + padding)
+    x1 = max(0, x - padding)
+    x2 = min(person_mask_cv2.shape[1], x + w + padding)
+    
+    # create face mask
+    face_mask = np.zeros(person_mask_cv2.shape, dtype=np.uint8)
+    face_mask[y1:y2, x1:x2] = 1
+
+    # subtract face from body mask
+    body_without_head = person_mask_cv2.copy()
+    body_without_head[face_mask == 1] = 0
+    return body_without_head*255
+
 # overlay segmentation with depth
-def overlay_segmentation_with_depth(depth_img, person_mask):
+def overlay_segmentation_with_depth(depth_img, so_no_head_mask):
     
     depth_img = np.load(depth_img)
-    mask = person_mask.astype(bool)
+    mask = so_no_head_mask.astype(bool)
     masked_depth_values = depth_img[mask] # extract depth values in the mask
 
     if masked_depth_values.size > 0: # compute basic depth metrics inside the mask for verification
@@ -142,8 +164,9 @@ def create_point_cloud(filtered_depth_mask):
 def run_pipeline(frame_rgb, depth_arr):
     sam_checkpoint = download_sam()
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
-    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, device)
-    depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask)
+    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint)
+    so_no_head_mask = so_no_head(img_rgb, person_segmentation_mask)
+    depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, so_no_head_mask)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     point_cloud = create_point_cloud(filtered_depth_mask)
     return point_cloud
