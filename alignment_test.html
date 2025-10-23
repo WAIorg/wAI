@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinect RGB/Depth Alignment Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .stream-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .stream-box {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stream-box h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        img {
+            max-width: 300px;
+            max-height: 225px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        .metrics {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .metric-label {
+            font-weight: bold;
+        }
+        .metric-value {
+            color: #666;
+        }
+        .status-good {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-fair {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .status-poor {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .instructions ul {
+            margin: 10px 0;
+        }
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kinect RGB/Depth Alignment Test</h1>
+        
+        <div class="instructions">
+            <h3>How to Use This Test</h3>
+            <ul>
+                <li><strong>RGB Stream:</strong> Shows the color camera feed</li>
+                <li><strong>Depth Stream:</strong> Shows the depth camera feed (registered to RGB coordinates)</li>
+                <li><strong>Aligned Stream:</strong> Shows RGB and depth overlaid (50% each)</li>
+                <li><strong>Verification:</strong> Click to get alignment metrics</li>
+            </ul>
+            <p><strong>Good alignment:</strong> Objects in RGB and depth should match pixel-perfectly. The aligned stream should show clear overlay without ghosting.</p>
+        </div>
+
+        <div class="stream-container">
+            <div class="stream-box">
+                <h3>RGB Stream</h3>
+                <img src="/stream/rgb" alt="RGB Stream" id="rgb-stream">
+            </div>
+            
+            <div class="stream-box">
+                <h3>Depth Stream (Registered)</h3>
+                <img src="/stream/depth" alt="Depth Stream" id="depth-stream">
+            </div>
+            
+            <div class="stream-box">
+                <h3>Aligned Stream</h3>
+                <img src="/stream/aligned" alt="Aligned Stream" id="aligned-stream">
+            </div>
+        </div>
+
+        <div class="metrics">
+            <h3>Alignment Verification</h3>
+            <button onclick="checkAlignment()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">Check Alignment</button>
+            <div id="metrics-content">
+                <p>Click "Check Alignment" to get current alignment metrics.</p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>What to Look For</h3>
+            <ul>
+                <li><strong>Excellent Alignment:</strong> Correlation > 0.7, Overlap > 60%</li>
+                <li><strong>Good Alignment:</strong> Correlation > 0.5, Overlap > 40%</li>
+                <li><strong>Fair Alignment:</strong> Correlation > 0.3, Overlap > 20%</li>
+                <li><strong>Poor Alignment:</strong> Below fair thresholds</li>
+            </ul>
+            <p><strong>Visual Check:</strong> In the aligned stream, edges and features should be crisp and well-defined, not blurry or doubled.</p>
+        </div>
+    </div>
+
+    <script>
+        function checkAlignment() {
+            const metricsContent = document.getElementById('metrics-content');
+            metricsContent.innerHTML = '<p>Loading metrics...</p>';
+            
+            fetch('/stream/verify-alignment')
+                .then(response => response.json())
+                .then(data => {
+                    let statusClass = 'status-poor';
+                    let statusText = 'Poor';
+                    
+                    const correlation = data.correlation || 0;
+                    const overlap = data.overlap_percentage || 0;
+                    
+                    if (correlation > 0.7 && overlap > 60) {
+                        statusClass = 'status-good';
+                        statusText = 'Excellent';
+                    } else if (correlation > 0.5 && overlap > 40) {
+                        statusClass = 'status-good';
+                        statusText = 'Good';
+                    } else if (correlation > 0.3 && overlap > 20) {
+                        statusClass = 'status-fair';
+                        statusText = 'Fair';
+                    }
+                    
+                    metricsContent.innerHTML = `
+                        <div class="metric-item">
+                            <span class="metric-label">Status:</span>
+                            <span class="metric-value ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Correlation:</span>
+                            <span class="metric-value">${correlation.toFixed(3)}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">RGB Edges:</span>
+                            <span class="metric-value">${data.rgb_edges || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Depth Edges:</span>
+                            <span class="metric-value">${data.depth_edges || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Overlap Edges:</span>
+                            <span class="metric-value">${data.overlap_edges || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Overlap Percentage:</span>
+                            <span class="metric-value">${overlap.toFixed(1)}%</span>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    metricsContent.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                });
+        }
+        
+        // Auto-refresh images every 2 seconds
+        setInterval(() => {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                const src = img.src;
+                img.src = src.split('?')[0] + '?t=' + Date.now();
+            });
+        }, 2000);
+    </script>
+</body>
+</html>
