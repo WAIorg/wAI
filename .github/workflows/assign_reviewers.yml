@@ -10,10 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Auto-assign reviewers
-        uses: peter-evans/auto-assign@v2
+        uses: kentaro-m/auto-assign-action@v2.0.0
         with:
-          reviewers: 'mackenziesnyder,adeleyounis,alexisbader,gavin2178'
-          remove-reviewers: false
-          add-assignees: author
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: '.github/auto_assign.yml'
 
