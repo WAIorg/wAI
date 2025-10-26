@@ -198,10 +198,20 @@ class KinectService:
             img_number = self._find_next_image_number()
             img_dir = os.path.join(self.images_dir, f"img_{img_number}")
             os.makedirs(img_dir, exist_ok=True)
+            
             cv2.imwrite(os.path.join(img_dir, "rgb.png"), self._latest_rgb)
+            
+            # Save unregistered depth
             depth_vis = cv2.convertScaleAbs(self._latest_depth, alpha=0.03)
-            cv2.imwrite(os.path.join(img_dir, "depth.png"), depth_vis)
+            cv2.imwrite(os.path.join(img_dir, "depth_raw_vis.png"), depth_vis)
             np.save(os.path.join(img_dir, "depth_raw.npy"), self._latest_depth)
+            
+            # Save registered depth if available
+            if self._latest_registered_depth is not None:
+                depth_reg_vis = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
+                cv2.imwrite(os.path.join(img_dir, "depth_registered.png"), depth_reg_vis)
+                np.save(os.path.join(img_dir, "depth_registered.npy"), self._latest_registered_depth)
+            
             return img_dir
 
     def _register_depth_to_rgb(self, depth, rgb):
