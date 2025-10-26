@@ -48,6 +48,11 @@ T = np.array([
     [-0.01232775]
 ])
 
+def _convert_depth_to_mm(depth_raw):
+        depth_m = 1.0 / (depth_raw * -0.0030711016 + 3.3309495161)
+        depth_mm = depth_m * 1000
+        return depth_mm.astype(np.uint16)
+
 
 class KinectService:
     """Thread-safe access to Kinect RGB/Depth frames and optional recording."""
@@ -204,7 +209,9 @@ class KinectService:
             # Save unregistered depth
             depth_vis = cv2.convertScaleAbs(self._latest_depth, alpha=0.03)
             cv2.imwrite(os.path.join(img_dir, "depth_raw_vis.png"), depth_vis)
-            np.save(os.path.join(img_dir, "depth_raw.npy"), self._latest_depth)
+            depth_mm = _convert_depth_to_mm(self._latest_depth)
+            np.save(os.path.join(img_dir, "depth_raw_mm.npy"), depth_mm)
+
             
             # Save registered depth if available
             if self._latest_registered_depth is not None:
@@ -331,5 +338,7 @@ class KinectService:
                 "overlap_edges": int(overlap_count),
                 "overlap_percentage": float(overlap_count / max(rgb_edge_count, depth_edge_count, 1) * 100)
             }
+        
+
 
 
