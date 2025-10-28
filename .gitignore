@@ -1,0 +1,5 @@
+/frontend/node_modules
+frontend/.vite
+/backend/data_collection_1
+**__pycache__
+calibration/images
