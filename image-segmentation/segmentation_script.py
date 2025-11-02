@@ -92,6 +92,12 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
     depth_vis = depth_img.copy().astype(np.float32)
     depth_norm = cv2.normalize(depth_vis, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     depth_colormap = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
+    plt.figure(figsize=(8, 6))
+    plt.imshow(depth_colormap)
+    plt.axis('off')
+    plt.title("Depth colormap")
+    plt.show()
+   
     overlay_color = np.zeros_like(depth_colormap) # create colored mask overlay - purpleish
     overlay_color[mask] = (255, 0, 255)                     
     alpha = 0.5                                         
@@ -142,13 +148,13 @@ def create_point_cloud(filtered_depth_mask):
 def run_pipeline(frame_rgb, depth_arr):
     sam_checkpoint = download_sam()
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
-    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, device)
+    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint)
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     point_cloud = create_point_cloud(filtered_depth_mask)
     return point_cloud
 
 if __name__ == "__main__":
-    frame_rgb = "./images/sub-004/rgb_2.png"
-    depth_arr = "./images/sub-004/depth_raw_2.npy"
+    frame_rgb = "./img_nov1/rgb.png"
+    depth_arr = "./img_nov1/depth_raw.npy"
     point_cloud = run_pipeline(frame_rgb, depth_arr)
