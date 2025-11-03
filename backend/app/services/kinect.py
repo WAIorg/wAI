@@ -48,14 +48,12 @@ T = np.array([
     [-0.01232775]
 ])
 
-def _convert_depth_to_mm(depth_raw):
-        depth_m = 1.0 / (depth_raw * -0.0030711016 + 3.3309495161)
-        depth_mm = depth_m * 1000
-        return depth_mm.astype(np.uint16)
-
-
 class KinectService:
-    """Thread-safe access to Kinect RGB/Depth frames and optional recording."""
+    """Access to Kinect RGB/Depth frames and optional recording."""
+
+
+    ############# SETUP #############
+
 
     def __init__(self, base_dir: str) -> None:
         self.base_dir = base_dir
@@ -64,11 +62,13 @@ class KinectService:
         os.makedirs(self.videos_dir, exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
 
+        # Latest frames
         self._lock = threading.Lock()
         self._running = False
         self._latest_rgb: Optional[np.ndarray] = None
         self._latest_depth: Optional[np.ndarray] = None
         self._latest_registered_depth: Optional[np.ndarray] = None
+        self._latest_registered_rgb: Optional[np.ndarray] = None
 
         # Recording state
         self._recording = False
@@ -96,26 +96,22 @@ class KinectService:
 
     def _capture_loop(self) -> None:
         while self._running:
-            rgb, depth = self._get_frames()
-            if rgb is None or depth is None:
+            rgb, depth_raw = self._get_frames()
+            if rgb is None or depth_raw is None:
                 time.sleep(0.01)
                 continue
+
+            depth_m = self._depth_to_meters(depth_raw)
+
+            # Only update the raw frames for streaming
             with self._lock:
                 self._latest_rgb = rgb
-                self._latest_depth = depth
-                # Register depth to RGB coordinate system
-                if HAS_FREENECT:
-                    self._latest_registered_depth = self._register_depth_to_rgb(depth, rgb)
-                else:
-                    self._latest_registered_depth = depth
-                if self._recording and self._rgb_writer and self._depth_writer:
-                    self._rgb_writer.write(rgb)
-                    depth_vis = cv2.convertScaleAbs(depth, alpha=0.03)
-                    self._depth_writer.write(depth_vis)
-                    self._record_depth_values.append(depth.copy())
-        # Ensure writers are closed if loop exits
+                self._latest_depth = depth_m
+
         if self._recording:
             self.stop_recording()
+
+    ############# GETTING FRAMES #############
 
     def _get_frames(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         if HAS_FREENECT:
@@ -137,14 +133,17 @@ class KinectService:
         fake_depth = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint16)
         return frame, fake_depth
 
-    def get_latest(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        with self._lock:
-            return self._latest_rgb, self._latest_depth
+    def get_latest(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
+        return self._latest_rgb, self._latest_depth, self._latest_registered_rgb
     
-    def get_latest_registered(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        """Get the latest RGB and depth frames with depth registered to RGB coordinates."""
+    def get_latest_registered(self) -> Optional[np.ndarray]:
+        """Get the latest RGB frame registered to depth coordinates."""
         with self._lock:
-            return self._latest_rgb, self._latest_registered_depth
+            return self._latest_registered_rgb
+        
+
+    ############# FILE ORGANIZATION #############
+
 
     def _find_next_take_number(self) -> int:
         take_number = 1
@@ -157,6 +156,10 @@ class KinectService:
         while os.path.exists(os.path.join(self.images_dir, f"img_{img_number}")):
             img_number += 1
         return img_number
+    
+
+    ############# RECORDING/CAPTURE #############
+
 
     def start_recording(self) -> Optional[str]:
         with self._lock:
@@ -200,111 +203,93 @@ class KinectService:
         with self._lock:
             if self._latest_rgb is None or self._latest_depth is None:
                 return None
-            img_number = self._find_next_image_number()
-            img_dir = os.path.join(self.images_dir, f"img_{img_number}")
-            os.makedirs(img_dir, exist_ok=True)
-            
-            cv2.imwrite(os.path.join(img_dir, "rgb.png"), self._latest_rgb)
-            
-            # Save unregistered depth
-            depth_vis = cv2.convertScaleAbs(self._latest_depth, alpha=0.03)
-            cv2.imwrite(os.path.join(img_dir, "depth_raw_vis.png"), depth_vis)
-            depth_mm = _convert_depth_to_mm(self._latest_depth)
-            np.save(os.path.join(img_dir, "depth_raw_mm.npy"), depth_mm)
+            rgb = self._latest_rgb.copy()
+            depth_m = self._latest_depth.copy()
 
-            
-            # Save registered depth if available
-            if self._latest_registered_depth is not None:
-                depth_reg_vis = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
-                cv2.imwrite(os.path.join(img_dir, "depth_registered.png"), depth_reg_vis)
-                np.save(os.path.join(img_dir, "depth_registered.npy"), self._latest_registered_depth)
-            
-            return img_dir
+        img_number = self._find_next_image_number()
+        img_dir = os.path.join(self.images_dir, f"img_{img_number}")
+        os.makedirs(img_dir, exist_ok=True)
 
-    def _register_depth_to_rgb(self, depth, rgb):
+        # Save RGB
+        cv2.imwrite(os.path.join(img_dir, "rgb.png"), rgb)
+
+        # Save depth (unregistered)
+        depth_vis = cv2.convertScaleAbs(depth_m, alpha=0.03)
+        cv2.imwrite(os.path.join(img_dir, "depth_raw_vis.png"), depth_vis)
+        np.save(os.path.join(img_dir, "depth_raw_mm.npy"), depth_m)
+
+        # Register RGB to depth
+        try:
+            registered_rgb = self._register_rgb_to_depth(rgb, depth_m)
+            cv2.imwrite(os.path.join(img_dir, "rgb_registered.png"), registered_rgb)
+        except Exception:
+            registered_rgb = None
+
+        return img_dir
+
+        
+    
+    ############# REGISTRATION #############
+
+
+    def _depth_to_meters(self, depth_raw: np.ndarray) -> np.ndarray:
+        depth_m = 1.0 / (depth_raw * -0.0030711016 + 3.3309495161)  # meters
+        return depth_m.astype(np.float32)
+        
+    def _register_rgb_to_depth(self, rgb: np.ndarray, depth_m: np.ndarray) -> np.ndarray:
         """
-        Register depth map to RGB image using full intrinsic + extrinsic + distortion correction.
-        Returns a depth map aligned to RGB coordinates.
+        Warp RGB into depth coordinates. Inputs:
+        - rgb: H_rgb x W_rgb x 3 (uint8)
+        - depth_m: H_depth x W_depth (float32), in meters
+        Uses R,T which map from depth/IR -> RGB (i.e. point_in_rgb = R @ point_in_depth + T).
         """
-        height, width = depth.shape
+        height, width = depth_m.shape
+        # pixel grid in depth image
+        j, i = np.meshgrid(np.arange(height), np.arange(width), indexing='ij')  # j=rows, i=cols
+        z = depth_m.flatten()  # length N in meters
 
-        # Prepare depth pixel grid
-        i, j = np.meshgrid(np.arange(width), np.arange(height))
-        pixels = np.stack((i, j), axis=-1).reshape(-1, 1, 2).astype(np.float32)  # Nx1x2
+        # back-project to depth/IR camera coords (points in meters)
+        x = (i.flatten().astype(np.float32) - cx_d) * z / fx_d
+        y = (j.flatten().astype(np.float32) - cy_d) * z / fy_d
+        points_depth = np.stack((x, y, z), axis=1).T  # 3 x N
 
-        # Undistort depth pixels to normalized camera coordinates
-        depth_points_norm = cv2.undistortPoints(
-            pixels,
-            cameraMatrix=np.array([[fx_d, 0, cx_d],
-                                [0, fy_d, cy_d],
-                                [0, 0, 1]], dtype=np.float32),
-            distCoeffs=dist_d
-        )  # Nx1x2
+        # transform to RGB camera frame: IMPORTANT: use R @ p + T (not R.T)
+        points_rgb = (R @ points_depth) + T  # 3 x N
 
-        # Convert normalized coordinates to 3D points in depth camera frame
-        z = depth.flatten().astype(np.float32)
-        x = depth_points_norm[:, 0, 0] * z
-        y = depth_points_norm[:, 0, 1] * z
-        points_3d = np.stack((x, y, z), axis=-1).T  # 3xN
+        pts_rgb = points_rgb.T  # N x 3
+        # Do pinhole projection (no distortion) then apply distortion if needed:
+        x_rgb = pts_rgb[:, 0] / (pts_rgb[:, 2] + 1e-8)
+        y_rgb = pts_rgb[:, 1] / (pts_rgb[:, 2] + 1e-8)
+        u = (x_rgb * fx_rgb + cx_rgb)
+        v = (y_rgb * fy_rgb + cy_rgb)
 
-        # Transform points to RGB camera frame
-        points_rgb = (R @ points_3d + T).T  # Nx3
+        # nearest-neighbor sampling into depth-grid sized rgb_registered image
+        rgb_registered = np.zeros((height, width, 3), dtype=np.uint8)
+        u_r = np.round(u).astype(np.int32)
+        v_r = np.round(v).astype(np.int32)
 
-        # Project into RGB image plane
-        x_rgb = points_rgb[:, 0] / points_rgb[:, 2]
-        y_rgb = points_rgb[:, 1] / points_rgb[:, 2]
-        pixels_rgb = cv2.projectPoints(
-            np.zeros((points_rgb.shape[0], 3), dtype=np.float32),  # dummy 3D points
-            rvec=np.zeros(3), tvec=np.zeros(3),
-            cameraMatrix=np.array([[fx_rgb, 0, cx_rgb],
-                                [0, fy_rgb, cy_rgb],
-                                [0, 0, 1]], dtype=np.float32),
-            distCoeffs=dist_rgb,
-            # override 3D points manually
-        )[0]  # Nx1x2
+        # valid mask where projected pixel falls inside rgb image bounds
+        valid = (u_r >= 0) & (u_r < rgb.shape[1]) & (v_r >= 0) & (v_r < rgb.shape[0]) & (pts_rgb[:, 2] > 0)
+        idxs = np.nonzero(valid)[0]
 
-        # Instead, use direct pinhole projection with distortion
-        # OpenCV recommends using cv2.projectPoints with actual 3D points
-        pixels_rgb, _ = cv2.projectPoints(
-            points_rgb.astype(np.float32),
-            rvec=np.zeros(3),
-            tvec=np.zeros(3),
-            cameraMatrix=np.array([[fx_rgb, 0, cx_rgb],
-                                [0, fy_rgb, cy_rgb],
-                                [0, 0, 1]], dtype=np.float32),
-            distCoeffs=dist_rgb
-        )
+        # map flattened indices back to 2D depth coords
+        y_img = idxs // width
+        x_img = idxs % width
+        rgb_registered[y_img, x_img] = rgb[v_r[idxs], u_r[idxs]]
 
-        pixels_rgb = pixels_rgb.reshape(-1, 2)
-
-        # Initialize registered depth map
-        registered_depth = np.zeros_like(depth, dtype=np.uint16)
-
-        # Filter valid points inside image
-        u = np.round(pixels_rgb[:, 0]).astype(np.int32)
-        v = np.round(pixels_rgb[:, 1]).astype(np.int32)
-        valid = (u >= 0) & (u < width) & (v >= 0) & (v < height)
-        registered_depth[v[valid], u[valid]] = depth.flatten()[valid]
-
-        return registered_depth
-
+        return rgb_registered
+    
     def create_alignment_verification_image(self) -> Optional[np.ndarray]:
-        """Create a visualization to verify RGB/depth alignment."""
-        with self._lock:
-            if self._latest_rgb is None or self._latest_registered_depth is None:
-                return None
-            
-            # Create a visualization showing both RGB and depth overlaid
-            rgb_copy = self._latest_rgb.copy()
-            depth_vis = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
-            
-            # Create a colored depth map
-            depth_colored = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
-            
-            # Blend RGB and depth (50% each)
-            blended = cv2.addWeighted(rgb_copy, 0.5, depth_colored, 0.5, 0)
-            
-            return blended
+        """Return blended RGB (aligned to depth) and colorized depth for visual check."""
+        if self._latest_registered_rgb is None or self._latest_depth is None:
+            return None
+
+        rgb_copy = self._latest_registered_rgb.copy()
+        depth_vis = cv2.convertScaleAbs(self._latest_depth, alpha=0.03)
+        depth_colored = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
+
+        blended = cv2.addWeighted(rgb_copy, 0.5, depth_colored, 0.5, 0)
+        return blended
 
     def verify_alignment_accuracy(self) -> dict:
         """Verify the accuracy of RGB/depth alignment using edge detection."""
