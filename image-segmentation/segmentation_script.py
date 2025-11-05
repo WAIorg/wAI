@@ -114,21 +114,40 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
 
 # filter outliers 
 def filter_depth_outliers(depth_map):
-    depth_map = np.nan_to_num(depth_map, nan=0.0) # nan for 0 value pixels
+    
+    # camera intrinsics
+    fx_d, fy_d = 596.25827383, 593.35350108
+    cx_d, cy_d = 328.00224565, 246.72323964
+    
+    # replace nans with 0
+    depth_map = np.nan_to_num(depth_map, nan=0.0)
     H, W = depth_map.shape
 
-    u = np.arange(W) # creating the pixel grid
+    # create pixel grid
+    u = np.arange(W)
     v = np.arange(H)
     u, v = np.meshgrid(u, v)
-    u = u.flatten()
-    v = v.flatten()
-    z = depth_map.flatten()
-    valid = z > 0 # keep valid points within depth percentiles
 
-    v_flipped = H - 1 - v[valid] # ensures orientation is correct
-    filtered_depth_mask = np.stack([u[valid], v_flipped, z[valid]], axis=-1)
+    # flatten arrays
+    u_flat = u.flatten()
+    v_flat = v.flatten()
+    z_flat = depth_map.flatten()
 
-    return filtered_depth_mask
+    # keep only non-zero
+    valid = z_flat > 0
+    u_valid = u_flat[valid]
+    v_valid = v_flat[valid]
+    z_valid = z_flat[valid]
+
+    # convert pixel coordinates to metric camera coordinates
+    X = (u_valid - cx_d) * z_valid / fx_d
+    Y = (v_valid - cy_d) * z_valid / fy_d
+    Z = z_valid
+
+    # Flip Y axis so the orientation matches Open3D visualization
+    points = np.stack([X, -Y, Z], axis=-1)
+
+    return points
 
 # create the point cloud from depth data
 def create_point_cloud(filtered_depth_mask):
@@ -141,6 +160,7 @@ def create_point_cloud(filtered_depth_mask):
 
     # visualize
     o3d.visualization.draw_geometries([person_point_cloud])
+    o3d.io.write_point_cloud('./point_cloud.ply', pcd)
 
     return person_point_cloud
 
@@ -156,5 +176,5 @@ def run_pipeline(frame_rgb, depth_arr):
 
 if __name__ == "__main__":
     frame_rgb = "./img_nov1/rgb.png"
-    depth_arr = "./img_nov1/depth_raw.npy"
+    depth_arr = "./img_nov1/depth_registered_3.npy"
     point_cloud = run_pipeline(frame_rgb, depth_arr)
