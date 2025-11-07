@@ -115,37 +115,25 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
 # filter outliers 
 def filter_depth_outliers(depth_map):
     
-    # camera intrinsics
-    fx_d, fy_d = 596.25827383, 593.35350108
+    fx_d, fy_d = 596.25827383, 593.35350108 # camera intrinsics
     cx_d, cy_d = 328.00224565, 246.72323964
-    
-    # replace nans with 0
-    depth_map = np.nan_to_num(depth_map, nan=0.0)
+    depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
-
-    # create pixel grid
-    u = np.arange(W)
+    u = np.arange(W) # create pixel grid
     v = np.arange(H)
     u, v = np.meshgrid(u, v)
-
-    # flatten arrays
-    u_flat = u.flatten()
+    u_flat = u.flatten() # flatten arrays
     v_flat = v.flatten()
     z_flat = depth_map.flatten()
-
-    # keep only non-zero
-    valid = z_flat > 0
+    valid = z_flat > 0 # keep only non-zero
     u_valid = u_flat[valid]
     v_valid = v_flat[valid]
     z_valid = z_flat[valid]
-
     # convert pixel coordinates to metric camera coordinates
     X = (u_valid - cx_d) * z_valid / fx_d
     Y = (v_valid - cy_d) * z_valid / fy_d
     Z = z_valid
-
-    # Flip Y axis so the orientation matches Open3D visualization
-    points = np.stack([X, -Y, Z], axis=-1)
+    points = np.stack([X, -Y, Z], axis=-1) # flip orienation for visuals
 
     return points
 
