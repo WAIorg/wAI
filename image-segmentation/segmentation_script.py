@@ -92,6 +92,12 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
     depth_vis = depth_img.copy().astype(np.float32)
     depth_norm = cv2.normalize(depth_vis, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     depth_colormap = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
+    plt.figure(figsize=(8, 6))
+    plt.imshow(depth_colormap)
+    plt.axis('off')
+    plt.title("Depth colormap")
+    plt.show()
+   
     overlay_color = np.zeros_like(depth_colormap) # create colored mask overlay - purpleish
     overlay_color[mask] = (255, 0, 255)                     
     alpha = 0.5                                         
@@ -108,21 +114,28 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
 
 # filter outliers 
 def filter_depth_outliers(depth_map):
-    depth_map = np.nan_to_num(depth_map, nan=0.0) # nan for 0 value pixels
+    
+    fx_d, fy_d = 596.25827383, 593.35350108 # camera intrinsics
+    cx_d, cy_d = 328.00224565, 246.72323964
+    depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
-
-    u = np.arange(W) # creating the pixel grid
+    u = np.arange(W) # create pixel grid
     v = np.arange(H)
     u, v = np.meshgrid(u, v)
-    u = u.flatten()
-    v = v.flatten()
-    z = depth_map.flatten()
-    valid = z > 0 # keep valid points within depth percentiles
+    u_flat = u.flatten() # flatten arrays
+    v_flat = v.flatten()
+    z_flat = depth_map.flatten()
+    valid = z_flat > 0 # keep only non-zero
+    u_valid = u_flat[valid]
+    v_valid = v_flat[valid]
+    z_valid = z_flat[valid]
+    # convert pixel coordinates to metric camera coordinates
+    X = (u_valid - cx_d) * z_valid / fx_d
+    Y = (v_valid - cy_d) * z_valid / fy_d
+    Z = z_valid
+    points = np.stack([X, -Y, Z], axis=-1) # flip orienation for visuals
 
-    v_flipped = H - 1 - v[valid] # ensures orientation is correct
-    filtered_depth_mask = np.stack([u[valid], v_flipped, z[valid]], axis=-1)
-
-    return filtered_depth_mask
+    return points
 
 # create the point cloud from depth data
 def create_point_cloud(filtered_depth_mask):
@@ -135,6 +148,7 @@ def create_point_cloud(filtered_depth_mask):
 
     # visualize
     o3d.visualization.draw_geometries([person_point_cloud])
+    o3d.io.write_point_cloud('./point_cloud.ply', pcd)
 
     return person_point_cloud
 
@@ -142,13 +156,13 @@ def create_point_cloud(filtered_depth_mask):
 def run_pipeline(frame_rgb, depth_arr):
     sam_checkpoint = download_sam()
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
-    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, device)
+    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint)
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     point_cloud = create_point_cloud(filtered_depth_mask)
     return point_cloud
 
 if __name__ == "__main__":
-    frame_rgb = "./images/sub-004/rgb_2.png"
-    depth_arr = "./images/sub-004/depth_raw_2.npy"
+    frame_rgb = "./img_nov1/rgb.png"
+    depth_arr = "./img_nov1/depth_registered_3.npy"
     point_cloud = run_pipeline(frame_rgb, depth_arr)
