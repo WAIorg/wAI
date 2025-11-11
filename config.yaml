@@ -1,0 +1,38 @@
+# config.yaml
+paths:
+  rgb_img_path: "volume-model/input/alexis_rgb.png"
+  depth_img_path: "volume-model/input/depth_registered_m.npy"
+  pt_cloud_ply_path: "volume-model/input/point_cloud.ply"
+  pt_cloud_txt_path: "volume-model/output/pointcloud.txt"
+  smplx_model_path: 'volume-model/models/smplx'
+  vposer_model_path: 'volume-model/models/vposer_v1_0'
+  openpose_path: "posture-estimator/human-pose-estimation-opencv/openpose.py"
+  pose_output_dir: 'volume-model/output'
+  pose_estimator_nn_path: "posture-estimator/human-pose-estimation-opencv/graph_opt.pb"
+
+downsampling:
+  voxel_size: 0.005
+  normal_radius: 0.05
+  normal_max_nn: 30
+
+inflation:
+  inflate_amount: 5.0
+
+cleaning:
+  nb_neighbors: 20
+  std_ratio: 2.0
+  smooth_voxel_size: 0.001
+
+mesh:
+  alpha: 0.15
+  merge_threshold: 0.002
+  mirror_offset: [0, 0, -0.1]
+
+voxelization:
+  voxel_size: 0.01  # in meters
+
+camera:
+fx: 596.25827383
+fy: 593.35350108
+cx: 328.00224565
+cy: 246.72323964
