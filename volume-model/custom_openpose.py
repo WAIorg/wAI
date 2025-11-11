@@ -11,8 +11,12 @@ import yaml
 
 with open("/Users/adeleyounis/Desktop/Capstone/wAI/config.yaml", "r") as f:
     config = yaml.safe_load(f)
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+try:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    # Fallback if running in notebook or REPL
+    BASE_DIR = os.getcwd()
 
 def resolve_path(rel_path):
     return os.path.join(BASE_DIR, rel_path)

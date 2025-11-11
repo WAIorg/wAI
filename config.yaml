@@ -1,13 +1,13 @@
 # config.yaml
 paths:
-  rgb_img_path: "volume-model/input/alexis_rgb.png"
-  depth_img_path: "volume-model/input/depth_registered_m.npy"
-  pt_cloud_ply_path: "volume-model/input/point_cloud.ply"
-  pt_cloud_txt_path: "volume-model/output/pointcloud.txt"
-  smplx_model_path: 'volume-model/models/smplx'
-  vposer_model_path: 'volume-model/models/vposer_v1_0'
+  rgb_img_path: "input/alexis_rgb.png"
+  depth_img_path: "input/depth_registered_m.npy"
+  pt_cloud_ply_path: "input/point_cloud.ply"
+  pt_cloud_txt_path: "output/pointcloud.txt"
+  smplx_model_path: 'models/smplx'
+  vposer_model_path: 'models/vposer_v1_0'
   openpose_path: "posture-estimator/human-pose-estimation-opencv/openpose.py"
-  pose_output_dir: 'volume-model/output'
+  pose_output_dir: 'output/'
   pose_estimator_nn_path: "posture-estimator/human-pose-estimation-opencv/graph_opt.pb"
 
 downsampling:
