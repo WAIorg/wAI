@@ -81,5 +81,6 @@ pip install -r requirements.txt
 
 - custom_openpose.py: pulls from human_pose_estimator's repo, add's code to save our json files, and map keypoints to known poses.
 
+- run_pixie.py: sets up and runs pixie demo model on input rgb images
 
 
