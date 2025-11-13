@@ -11,4 +11,4 @@ plotly
 tqdm
 kornia
 chumpy
-yaml
+pyyaml

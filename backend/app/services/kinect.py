@@ -306,39 +306,5 @@ class KinectService:
             
             return blended
 
-    def verify_alignment_accuracy(self) -> dict:
-        """Verify the accuracy of RGB/depth alignment using edge detection."""
-        with self._lock:
-            if self._latest_rgb is None or self._latest_registered_depth is None:
-                return {"error": "No frames available"}
-            
-            # Convert to grayscale for edge detection
-            rgb_gray = cv2.cvtColor(self._latest_rgb, cv2.COLOR_BGR2GRAY)
-            depth_gray = cv2.convertScaleAbs(self._latest_registered_depth, alpha=0.03)
-            
-            # Apply edge detection
-            rgb_edges = cv2.Canny(rgb_gray, 50, 150)
-            depth_edges = cv2.Canny(depth_gray, 50, 150)
-            
-            # Calculate edge correlation
-            correlation = cv2.matchTemplate(rgb_edges, depth_edges, cv2.TM_CCOEFF_NORMED)[0][0]
-            
-            # Count edge pixels
-            rgb_edge_count = np.sum(rgb_edges > 0)
-            depth_edge_count = np.sum(depth_edges > 0)
-            
-            # Calculate edge overlap
-            edge_overlap = cv2.bitwise_and(rgb_edges, depth_edges)
-            overlap_count = np.sum(edge_overlap > 0)
-            
-            return {
-                "correlation": float(correlation),
-                "rgb_edges": int(rgb_edge_count),
-                "depth_edges": int(depth_edge_count),
-                "overlap_edges": int(overlap_count),
-                "overlap_percentage": float(overlap_count / max(rgb_edge_count, depth_edge_count, 1) * 100)
-            }
-        
-
 
 
