@@ -11,3 +11,5 @@ image-segmentation/venv
 image-segmentation/.DS_Store
 image-segmentation/images/
 image-segmentation/outputs/
+
+volume-model/models
