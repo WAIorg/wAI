@@ -105,9 +105,3 @@ def stream_aligned(kinect: KinectService = Depends(get_kinect_service)):
     )
 
 
-@router.get("/verify-alignment")
-def verify_alignment(kinect: KinectService = Depends(get_kinect_service)):
-    """Get alignment verification metrics."""
-    return kinect.verify_alignment_accuracy()
-
-

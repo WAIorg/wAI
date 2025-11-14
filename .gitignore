@@ -3,3 +3,13 @@ frontend/.vite
 /backend/data_collection_1
 **__pycache__
 calibration/images
+/depth-image/outputs
+
+image-segmentation/sam_vit_h.pth
+image-segmentation/yolov8n.pt
+image-segmentation/venv
+image-segmentation/.DS_Store
+image-segmentation/images/
+image-segmentation/outputs/
+
+volume-model/models
