@@ -119,13 +119,15 @@ def filter_depth_outliers(depth_map):
     cx_d, cy_d = 328.00224565, 246.72323964
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
+
     u = np.arange(W) # create pixel grid
     v = np.arange(H)
     u, v = np.meshgrid(u, v)
     u_flat = u.flatten() # flatten arrays
     v_flat = v.flatten()
     z_flat = depth_map.flatten()
-    valid = z_flat > 0 # keep only non-zero
+    depth_min, depth_max = 0.5, 4  # meters
+    valid = (z_flat > depth_min) & (z_flat < depth_max)
     u_valid = u_flat[valid]
     v_valid = v_flat[valid]
     z_valid = z_flat[valid]
@@ -142,10 +144,9 @@ def create_point_cloud(filtered_depth_mask):
     
     pcd = o3d.geometry.PointCloud() # create point cloud
     pcd.points = o3d.utility.Vector3dVector(filtered_depth_mask)
-    labels = np.array(pcd.cluster_dbscan(eps=10.0, min_points=50)) # remove floating blobs
+    labels = np.array(pcd.cluster_dbscan(eps=0.025, min_points=20)) # remove floating blobs
     largest_label = np.bincount(labels[labels >= 0]).argmax() # keep largest blob (person)
     person_point_cloud = pcd.select_by_index(np.where(labels == largest_label)[0])
-
     # visualize
     o3d.visualization.draw_geometries([person_point_cloud])
     o3d.io.write_point_cloud('./point_cloud.ply', pcd)
@@ -163,6 +164,6 @@ def run_pipeline(frame_rgb, depth_arr):
     return point_cloud
 
 if __name__ == "__main__":
-    frame_rgb = "./img_nov1/rgb.png"
-    depth_arr = "./img_nov1/depth_registered_3.npy"
+    frame_rgb = "./images/rgb.png"
+    depth_arr = "./images/depth.npy"
     point_cloud = run_pipeline(frame_rgb, depth_arr)
