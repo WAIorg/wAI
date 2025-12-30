@@ -1,0 +1,14 @@
+numpy
+open3d
+plyfile
+trimesh
+opencv-python
+torch
+matplotlib
+smplx
+human-body-prior
+plotly
+tqdm
+kornia
+chumpy
+pyyaml
