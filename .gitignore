@@ -1,0 +1,16 @@
+/frontend/node_modules
+frontend/.vite
+/backend/data_collection_1
+**__pycache__
+calibration/images
+/depth-image/outputs
+
+3D-processing/modelling/models/.DS_Store
+3D-processing/modelling/.DS_Store
+3D-processing/.DS_Store
+3D-processing/modelling/output
+3D-processing/modelling/models
+3D-processing/segmentation/outputs
+3D-processing/segmentation/images
+3D-processing/sam_vit_h.pth
+3D-processing/yolov8n.pt
