@@ -14,11 +14,11 @@ from modelling import run_pixie
 
 def main(visualize: bool = True):
     # 1) Run PIXIE stage
-    pixie_out = run_pixie.main(visualize=visualize, setup_pixie=False)
+    pixie_out = run_pixie.main(visualize=False, setup_pixie=False)
     print("✅ PIXIE stage complete")
 
     # 2) Run alpha meshing stage
-    mesh = alpha_mesh.main(visualize=visualize, save=False)
+    mesh = alpha_mesh.main(visualize=visualize, save=True)
     print("✅ Alpha meshing stage complete")
 
     # 3) Volume stage:

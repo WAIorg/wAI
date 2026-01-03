@@ -1,7 +1,27 @@
 import open3d as o3d
 import numpy as np
 import os
+import yaml
 from  modelling import utils
+
+CONFIG_PATH = "/Users/adeleyounis/Desktop/Capstone/wAI/config.yaml"
+
+
+def load_config(config_path: str):
+    """Load and parse YAML configuration."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    def resolve_path(rel_path):
+        if os.path.isabs(rel_path):
+            return rel_path
+        return os.path.normpath(os.path.join(base_dir, rel_path))
+
+    # Resolve all paths
+    paths = {k: resolve_path(v) for k, v in config.get("paths", {}).items()}
+    return paths
 
 def mesh_volume(mesh: o3d.geometry.TriangleMesh) -> float:
     """
@@ -22,7 +42,12 @@ def compute_voxel_volume(mesh: o3d.geometry.TriangleMesh, voxel_size=0.005) -> f
     voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(mesh, voxel_size=voxel_size)
     return len(voxel_grid.get_voxels()) * (voxel_size ** 3)
 
-def main(mesh, voxel_size: float = 0.005):
+def main(mesh=None, mesh_path=None):
+    if mesh_path:
+        mesh = o3d.io.read_triangle_mesh(mesh_path)
+    if mesh is None and mesh_path is None:
+        raise ValueError("Either mesh or mesh_path must be provided.")
+    
     mesh.compute_vertex_normals()
     mesh = utils.clean_mesh(mesh)
     print("Mesh cleaning done.")
@@ -34,3 +59,7 @@ def main(mesh, voxel_size: float = 0.005):
     print("\nVOLUME ESTIMATION RESULTS:")
     print(f"Analytic mesh volume: {analytic_vol:.6f} m³  ({(analytic_vol*1000):.2f} L)")
     return analytic_vol*1000  # return in liters
+
+if __name__ == "__main__":
+    paths = load_config(CONFIG_PATH)
+    main(mesh_path='/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/output/adele_down/adele_down.obj')

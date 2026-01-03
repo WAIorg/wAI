@@ -24,8 +24,6 @@ def load_config(config_path: str):
     return paths, config
 
 def read_ply_as_o3d(paths, config, visualize=False) -> o3d.geometry.PointCloud:
-    paths, config = load_config(CONFIG_PATH)
-
     input_path = paths["pt_cloud_ply_path"]
 
     plydata = PlyData.read(input_path)  
@@ -72,7 +70,7 @@ def create_save_alpha_mesh(pcd: o3d.geometry.PointCloud, visualize=False, save=T
         o3d.visualization.draw_geometries([mesh], mesh_show_back_face=True)
 
     if save:
-        path = "./output/alpha_mesh.obj"
+        path = "./alpha_mesh.obj"
         o3d.io.write_triangle_mesh(path, mesh)
         print(f"Saved alpha mesh to {path}")
 
@@ -89,3 +87,5 @@ def main(visualize=False, save=True):
 
     return mesh
 
+if __name__ == "__main__":
+    main(visualize=True, save=True)
