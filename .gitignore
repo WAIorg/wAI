@@ -5,11 +5,17 @@ frontend/.vite
 calibration/images
 /depth-image/outputs
 
-image-segmentation/sam_vit_h.pth
-image-segmentation/yolov8n.pt
-image-segmentation/venv
-image-segmentation/.DS_Store
-image-segmentation/images/
-image-segmentation/outputs/
+3D-processing/modelling/models/.DS_Store
+3D-processing/modelling/.DS_Store
+3D-processing/.DS_Store
+3D-processing/modelling/output
+3D-processing/modelling/models
+3D-processing/segmentation/outputs
+3D-processing/segmentation/images
+3D-processing/sam_vit_h.pth
+3D-processing/yolov8n.pt
 
-volume-model/models
+*.ply
+*.obj
+*.DS_Store
+
