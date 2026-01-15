@@ -18,7 +18,18 @@
    > Note: You need around **2.4 GB** of space for the SAM checkpoint.
 
 5. Change the paths to the RGB image and the depth array in the `__main__` call to point to your data.
-6. Run the pipeline:
+6. Clone the SAM3D Body repoitory with 
+
+```bash
+git clone https://github.com/facebookresearch/sam3.git
+cd sam3
+pip install -e .
+pip install decord psutil
+```
+
+7. Download the SAM3D Huggingface model from: https://huggingface.co/facebook/sam-3d-body-dinov3, and follow the instructions to request the model with your HuggingFace account in order to be granted access
+
+8. Run the pipeline:
    ```bash
    python segmentation_script.py
    ```
