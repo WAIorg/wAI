@@ -9,6 +9,8 @@ sys.path.insert(0, SAM3D_ROOT)
 from sam_3d_body import load_sam_3d_body, SAM3DBodyEstimator
 import os
 import subprocess
+import trimesh
+import pymeshfix
 
 # download SAM
 def download_sam():
@@ -372,6 +374,55 @@ def sam3d_mesh_from_verts_faces(verts: np.ndarray, faces: np.ndarray) -> o3d.geo
     mesh.compute_vertex_normals()
     return mesh
 
+def o3d_to_trimesh(mesh_o3d: o3d.geometry.TriangleMesh) -> trimesh.Trimesh:
+    v = np.asarray(mesh_o3d.vertices)
+    f = np.asarray(mesh_o3d.triangles)
+    return trimesh.Trimesh(vertices=v, faces=f, process=False)
+
+def trimesh_to_o3d(mesh_tm: trimesh.Trimesh) -> o3d.geometry.TriangleMesh:
+    mesh_o3d = o3d.geometry.TriangleMesh()
+    mesh_o3d.vertices = o3d.utility.Vector3dVector(np.asarray(mesh_tm.vertices))
+    mesh_o3d.triangles = o3d.utility.Vector3iVector(np.asarray(mesh_tm.faces))
+    mesh_o3d.remove_duplicated_vertices()
+    mesh_o3d.remove_duplicated_triangles()
+    mesh_o3d.remove_degenerate_triangles()
+    mesh_o3d.remove_unreferenced_vertices()
+    mesh_o3d.compute_vertex_normals()
+    mesh_o3d.orient_triangles()
+    return mesh_o3d
+
+def make_watertight_meshfix(mesh_o3d: o3d.geometry.TriangleMesh,
+                            keep_largest_component: bool = True) -> o3d.geometry.TriangleMesh:
+    # Pre-clean in Open3D
+    m = o3d.geometry.TriangleMesh(mesh_o3d)
+    m.remove_duplicated_vertices()
+    m.remove_duplicated_triangles()
+    m.remove_degenerate_triangles()
+    m.remove_unreferenced_vertices()
+    m.remove_non_manifold_edges()
+    m.compute_vertex_normals()
+    m.orient_triangles()
+
+    tm = o3d_to_trimesh(m)
+
+    # Optional: keep only the main body component before repair
+    if keep_largest_component:
+        comps = tm.split(only_watertight=False)
+        if len(comps) > 1:
+            tm = max(comps, key=lambda c: c.area)
+
+    # MeshFix repair
+    mf = pymeshfix.MeshFix(tm.vertices, tm.faces)
+    mf.repair(verbose=False, joincomp=True, remove_smallest_components=True)
+
+    v_fixed, f_fixed = mf.v, mf.f
+    tm_fixed = trimesh.Trimesh(vertices=v_fixed, faces=f_fixed, process=False)
+
+    # Ensure normals/orientation consistent for volume
+    tm_fixed.fix_normals()
+
+    return trimesh_to_o3d(tm_fixed)
+
 # run segmentation pipeline
 def run_pipeline(frame_rgb, depth_arr):
 
@@ -407,21 +458,35 @@ def run_pipeline(frame_rgb, depth_arr):
 
     T = similarity_icp_mesh_to_depth(mesh, point_cloud, voxel=0.01, max_corr=0.05)
 
-    mesh_aligned = o3d.geometry.TriangleMesh(mesh)  # copy
+    mesh_aligned = o3d.geometry.TriangleMesh(mesh)
     mesh_aligned.transform(T)
     mesh_aligned.compute_vertex_normals()
+    mesh_aligned.orient_triangles()
+
+    mesh_watertight = make_watertight_meshfix(mesh_aligned)
+
+    print("watertight?", mesh_watertight.is_watertight())
+    print("edge manifold?", mesh_watertight.is_edge_manifold())
+    print("vertex manifold?", mesh_watertight.is_vertex_manifold())
+
+    if not mesh_watertight.is_watertight():
+        raise RuntimeError("Repair failed to produce watertight mesh (inspect for severe missing regions).")
+
+    volume_m3 = abs(mesh_watertight.get_volume())
+    print("volume (m^3):", volume_m3)
 
     # sanity view
     mesh_aligned.paint_uniform_color([1.0, 0.0, 0.0])
     point_cloud.paint_uniform_color([0.7, 0.7, 0.7])
     o3d.visualization.draw_geometries([point_cloud, mesh_aligned])
 
-    # volume
-    if not mesh_aligned.is_watertight():
-        print("WARNING: mesh is not watertight; volume may be invalid.")
-    else:
-        volume_m3 = mesh_aligned.get_volume()
-        print(f"Volume: {volume_m3:.6f} m³")
+    pc = np.asarray(point_cloud.points)
+    print("PC z range:", pc[:,2].min(), pc[:,2].max())  # should look like ~0.5–4.0 (meters)
+
+    # mesh extent sanity after transform
+    bbox = mesh_aligned.get_axis_aligned_bounding_box()
+    print("mesh extent (m):", bbox.get_extent())         # height should be ~1.2–2.1 for an adult
+
     
     o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", mesh_aligned)
     np.save("sam3d_to_depth_T.npy", T)
@@ -429,6 +494,6 @@ def run_pipeline(frame_rgb, depth_arr):
     return point_cloud, verts
 
 if __name__ == "__main__":
-    frame_rgb = "./images/rgb.png"
-    depth_arr = "./images/depth.npy"
+    frame_rgb = "./images/rgb_1.png"
+    depth_arr = "./images/depth_1.npy"
     run_pipeline(frame_rgb, depth_arr)
