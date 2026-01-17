@@ -1,4 +1,5 @@
-from modelling import modelling_script
+from modelling import obj_to_volume
+from weight_calculation import weight_formula
 from segmentation import segmentation_script
 import yaml
 import os   
@@ -23,8 +24,7 @@ def load_config(config_path: str):
 def main(visualize: bool = True):
     paths, config = load_config(CONFIG_PATH)
 
-    # Step 1: Image Segmentation
-    point_cloud = segmentation_script.run_pipeline(
+    point_cloud, mesh = segmentation_script.run_pipeline(
         frame_rgb=paths["rgb_img_path"], 
         depth_arr=paths["depth_img_path"],
         visualize=visualize
@@ -33,14 +33,11 @@ def main(visualize: bool = True):
     print("Point cloud saved at:", paths["pt_cloud_ply_path"])
     print("✅ Image segmentation stage complete")
 
-    # Step 2: 3D Modelling
-    volume = modelling_script.main(visualize=visualize)
+    volume = obj_to_volume.main(mesh)
     print("✅ 3D modelling stage complete")
 
-    # TODO:
-    # Further steps: get weight estimate, combine meshes, etc.
-
-
+    weight_formula.able_body_weight_formula(sex=config["inputs"]["sex"], volume=volume, height=config["inputs"]["height"])
+    print("✅ Weight calculation stage complete")
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)

@@ -22,10 +22,9 @@ def main(visualize: bool = True):
     print("✅ Alpha meshing stage complete")
 
     # 3) Volume stage:
-    #TODO: update once combining is working to use that .obj
-
     volume = obj_to_volume.main(pixie_out)
     print("✅ Volume computation stage complete")
+    
     return volume
 
 if __name__ == "__main__":
