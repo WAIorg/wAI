@@ -132,8 +132,11 @@ def overlay_segmentation_with_depth(depth_img, person_mask):
 # filter outliers 
 def filter_depth_outliers(depth_map):
     
-    fx_d, fy_d = 596.25827383, 593.35350108 # camera intrinsics
-    cx_d, cy_d = 328.00224565, 246.72323964
+    fx_d, fy_d = 638.19, 638.19
+    cx_d, cy_d = 639.70, 356.18
+    # fx_d, fy_d = 596.25827383, 593.35350108 # camera intrinsics
+    # cx_d, cy_d = 328.00224565, 246.72323964
+    depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
     u = np.arange(W) # create pixel grid
@@ -172,9 +175,9 @@ def create_point_cloud(filtered_depth_mask):
 def create_pose_sam3d(img, x1, y1, x2, y2,estimator, device): 
     
     K = np.array([
-        [596.25827383, 0.0,         328.00224565],
-        [0.0,          593.35350108,246.72323964],
-        [0.0,          0.0,           1.0],
+        [638.19, 0.0,638.19],
+        [0.0,639.70,246.72323964],
+        [0.0,0.0,356.18],
     ], dtype=np.float32)
 
     cam_int = torch.tensor(K, dtype=torch.float32, device=device).unsqueeze(0)
