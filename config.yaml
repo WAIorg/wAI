@@ -3,6 +3,11 @@ paths:
   rgb_img_path: "/Users/adeleyounis/Desktop/Capstone/data/adele.png"
   depth_img_path: "/Users/adeleyounis/Desktop/Capstone/data/depth_adele.npy"
   pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/point_cloud.ply"
+  sam_pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/sam_point_cloud.ply"
+  sam3d_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d/checkpoints/sam-3d-body-dinov3/model.ckpt'
+  mhr_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
+
+  # archived
   pt_cloud_txt_path: "output/pointcloud.txt"
   smplx_model_path: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/models/smplx'
   vposer_model_path: /Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/models/vposer_v1_0'
@@ -10,9 +15,7 @@ paths:
   openpose_path: "posture-estimator/human-pose-estimation-opencv/openpose.py"
   pose_output_dir: 'output/'
   pose_estimator_nn_path: "posture-estimator/human-pose-estimation-opencv/graph_opt.pb"
-  sam3d_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/segmentation/sam-3d/checkpoints/sam-3d-body-dinov3/model.ckpt'
-  mhr_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/segmentation/sam-3d/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
-
+ 
 downsampling:
   voxel_size: 0.005
   normal_radius: 0.05

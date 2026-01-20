@@ -105,9 +105,9 @@ def visualize_output_mesh(output_dir: str, visualize: bool = True):
     mesh = o3d.io.read_triangle_mesh(mesh_path)
     mesh.compute_vertex_normals()
     mesh.paint_uniform_color([0.1, 0.7, 0.9])
-    print("Successfully loaded mesh from:", mesh_path)
 
     if visualize:
+        print("Successfully loaded mesh from:", mesh_path)
         o3d.visualization.draw_geometries([mesh])
     return mesh
 
