@@ -1,12 +1,23 @@
+"""
+Run full wAI segmentation pipeline:
+1) Runs YOLOv8 to detect person
+2) Runs SAM to segment person
+3) Overlays segmentation on depth image
+4) Filters depth data to create point cloud 
+"""
+from pathlib import Path
 import torch, numpy as np, cv2
 from ultralytics import YOLO
 from matplotlib import pyplot as plt
 import open3d as o3d
 from segment_anything import SamPredictor, sam_model_registry
 import os
+import yaml
 import subprocess
 
-CONFIG_PATH = "/Users/adeleyounis/Desktop/Capstone/wAI/config.yaml"
+REPO_ROOT = Path(__file__).resolve().parents[2]  # adjust depth if needed
+CONFIG_PATH = REPO_ROOT / "config.yaml"
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def load_config(config_path: str):
     """Load and parse YAML configuration."""
@@ -26,7 +37,6 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
-    
     sam_checkpoint = "sam_vit_h.pth"
     url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
     if not os.path.exists(sam_checkpoint):
@@ -36,7 +46,7 @@ def download_sam():
         print("SAM checkpoint already exists.")
     print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
     
-    return os.path.abspath(sam_checkpoint)
+    return os.path.abspath(sam_checkpoint), device
 
 # YOLO person recognition 
 def person_recognition(frame_rgb, visualize=False):
@@ -72,7 +82,6 @@ def person_recognition(frame_rgb, visualize=False):
 
 # segment person from image with SAM
 def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
 
     predictor = SamPredictor(sam) # SAM predictor
@@ -95,7 +104,6 @@ def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False
 
 # overlay segmentation with depth
 def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
-    
     depth_img = np.load(depth_img)
     mask = person_mask.astype(bool)
     masked_depth_values = depth_img[mask] # extract depth values in the mask
@@ -140,9 +148,9 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
 
 # filter outliers 
 def filter_depth_outliers(depth_map):
-    
-    fx_d, fy_d = 596.25827383, 593.35350108 # camera intrinsics
-    cx_d, cy_d = 328.00224565, 246.72323964
+    fx_d, fy_d = 638.19, 638.19
+    cx_d, cy_d = 639.70, 356.18
+    depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
 
@@ -152,8 +160,7 @@ def filter_depth_outliers(depth_map):
     u_flat = u.flatten() # flatten arrays
     v_flat = v.flatten()
     z_flat = depth_map.flatten()
-    depth_min, depth_max = 0.5, 4  # meters
-    valid = (z_flat > depth_min) & (z_flat < depth_max)
+    valid = z_flat > 0 # keep only non-zero
     u_valid = u_flat[valid]
     v_valid = v_flat[valid]
     z_valid = z_flat[valid]
@@ -167,8 +174,8 @@ def filter_depth_outliers(depth_map):
     return points
 
 # create the point cloud from depth data
-def create_point_cloud(filtered_depth_mask, visualize=False):
-    
+def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
+    paths, config = load_config(CONFIG_PATH)
     pcd = o3d.geometry.PointCloud() # create point cloud
     pcd.points = o3d.utility.Vector3dVector(filtered_depth_mask)
     labels = np.array(pcd.cluster_dbscan(eps=0.025, min_points=20)) # remove floating blobs
@@ -179,23 +186,36 @@ def create_point_cloud(filtered_depth_mask, visualize=False):
         # visualize
         o3d.visualization.draw_geometries([person_point_cloud])
 
-    o3d.io.write_point_cloud('./point_cloud.ply', pcd)
+    if save:
+        o3d.io.write_point_cloud(paths["pt_cloud_ply_path"], person_point_cloud)
+        print("Point cloud saved at:", paths["pt_cloud_ply_path"])
+
     print("Point cloud created with shape:", np.asarray(person_point_cloud.points).shape)
 
     return person_point_cloud
 
-# run segmentation pipeline
-def run_pipeline(frame_rgb, depth_arr, visualize=False):
-    sam_checkpoint = download_sam()
-    img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb, visualize=visualize)
+def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+    print("Starting segmentation pipeline...")
+    
+    sam_checkpoint, device = download_sam()
+    # 1) YOLO person recognition
+    img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
+
+    # 2) SAM person segmentation
     person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
+    
+    # 3) Overlay segmentation with depth
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
-    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize)
-    return point_cloud
+    
+    # 4) Create point cloud
+    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
+    print("Finished processing point cloud")
+
+    return point_cloud, img_rgb, x1, y1, x2, y2
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
-    frame_rgb=paths["rgb_img_path"], 
-    depth_arr=paths["depth_img_path"],
-    point_cloud = run_pipeline(frame_rgb, depth_arr)
+    frame_rgb=paths["rgb_img_path"]
+    depth_arr=paths["depth_img_path"]
+    point_cloud = run_pipeline(frame_rgb, depth_arr, True)
