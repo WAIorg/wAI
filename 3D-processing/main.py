@@ -31,26 +31,30 @@ def load_config(config_path: str):
     paths = {k: resolve_path(v) for k, v in config.get("paths", {}).items()}
     return paths, config
 
-def main(visualize: bool = True):
+def main(visualize: bool = True, save: bool = True):
     paths, config = load_config(CONFIG_PATH)
     # 1) Segmentation pipeline
     point_cloud, img_rgb, x1, y1, x2, y2 = segmentation_script.run_pipeline(
         frame_rgb=paths["rgb_img_path"], 
         depth_arr=paths["depth_img_path"],
-        visualize=visualize
+        visualize=visualize, 
+        save=save
         )
     # 2) Modelling pipeline
     mesh = modelling_script.main(
         img_rgb=img_rgb, x1=x1, y1=y1, x2=x2, 
-        y2=y2, point_cloud=point_cloud, visualize=visualize
+        y2=y2, point_cloud=point_cloud, 
+        visualize=visualize, save=save
         )
 
     # 3) Volume calculation
-    volume = obj_to_volume.main(mesh)
+    vol = mesh.get_volume()
 
     # 4) Weight estimation
-    weight_formula.able_body_weight_formula(sex=config["inputs"]["sex"], volume=volume, height=config["inputs"]["height"])
+    print("Weight using Open3D volume:")
+    weight_formula.able_body_weight_formula(sex=config["inputs"]["sex"], volume=vol, height=config["inputs"]["height"])
+
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
-    main(visualize=False)
+    main(visualize=False, save=True)

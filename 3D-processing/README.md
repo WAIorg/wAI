@@ -34,6 +34,7 @@ pip install decord psutil
 8. Update the `.\config.yaml` file with the correct paths for:
 -  `rgb_img_path` and `depth_img_path`, these will be your model inputs. 
 - `sam3d_model_checkpoint` and `mhr_model_checkpoint` to point to the installed `sam-3d` models
+- Optional: If you want to save your point clouds update `sam_pt_cloud_ply_path` and `pt_cloud_ply_path`
 
 9. Update the `SAM3D_ROOT` file path in `modelling/modelling_script.py`
 

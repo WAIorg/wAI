@@ -104,7 +104,6 @@ def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False
 
 # overlay segmentation with depth
 def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
-    
     depth_img = np.load(depth_img)
     mask = person_mask.astype(bool)
     masked_depth_values = depth_img[mask] # extract depth values in the mask
@@ -175,7 +174,7 @@ def filter_depth_outliers(depth_map):
     return points
 
 # create the point cloud from depth data
-def create_point_cloud(filtered_depth_mask, visualize=False):
+def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
     paths, config = load_config(CONFIG_PATH)
     pcd = o3d.geometry.PointCloud() # create point cloud
     pcd.points = o3d.utility.Vector3dVector(filtered_depth_mask)
@@ -187,13 +186,15 @@ def create_point_cloud(filtered_depth_mask, visualize=False):
         # visualize
         o3d.visualization.draw_geometries([person_point_cloud])
 
-    o3d.io.write_point_cloud(paths["pt_cloud_ply_path"], person_point_cloud)
-    print("Point cloud saved at:", paths["pt_cloud_ply_path"])
+    if save:
+        o3d.io.write_point_cloud(paths["pt_cloud_ply_path"], person_point_cloud)
+        print("Point cloud saved at:", paths["pt_cloud_ply_path"])
+
     print("Point cloud created with shape:", np.asarray(person_point_cloud.points).shape)
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False):
+def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
     print("Starting segmentation pipeline...")
     
     sam_checkpoint, device = download_sam()
@@ -208,7 +209,7 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False):
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     
     # 4) Create point cloud
-    point_cloud = create_point_cloud(filtered_depth_mask)
+    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
     print("Finished processing point cloud")
 
     return point_cloud, img_rgb, x1, y1, x2, y2

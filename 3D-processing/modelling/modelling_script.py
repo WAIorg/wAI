@@ -230,7 +230,7 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True):
+def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D
@@ -243,9 +243,10 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True):
         point_cloud.paint_uniform_color([0.7, 0.7, 0.7])
         sam_pcd.paint_uniform_color([1.0, 0.0, 0.0])
         o3d.visualization.draw_geometries([point_cloud, sam_pcd])
-    
-    o3d.io.write_point_cloud(paths["sam_pt_cloud_ply_path"], sam_pcd)
-    print("SAM point cloud saved at:", paths["sam_pt_cloud_ply_path"])
+
+    if save:
+        o3d.io.write_point_cloud(paths["sam_pt_cloud_ply_path"], sam_pcd)
+        print("SAM point cloud saved at:", paths["sam_pt_cloud_ply_path"])
     print("SAM3D pose created. Proceeding to ICP alignment...")
 
     # 2) Run ICP registration
@@ -262,8 +263,10 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True):
         point_cloud.paint_uniform_color([0.7, 0.7, 0.7])
         o3d.visualization.draw_geometries([point_cloud, mesh_aligned])
 
-    # 3) Make watertight mesh
+    # 3) Make watertight mesh 
     watertight_mesh = utils.make_watertight_meshfix(mesh_aligned)
-    o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", watertight_mesh)
+    
+    if save:
+        o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", watertight_mesh)
     return watertight_mesh
 
