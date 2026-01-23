@@ -5,6 +5,8 @@ frontend/.vite
 calibration/images
 /depth-image/outputs
 
+data
+
 3D-processing/modelling/models/.DS_Store
 3D-processing/modelling/.DS_Store
 3D-processing/.DS_Store

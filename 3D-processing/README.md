@@ -24,9 +24,6 @@
 ```bash
 cd modelling
 git clone https://github.com/facebookresearch/sam-3d-body.git
-cd sam-3d
-pip install -e .
-pip install decord psutil
 ```
 
 7. Download the SAM3D Huggingface model from: https://huggingface.co/facebook/sam-3d-body-dinov3, and follow the instructions to request the model with your HuggingFace account in order to be granted access

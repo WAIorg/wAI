@@ -12,8 +12,11 @@ from segmentation import segmentation_script
 import yaml
 import trimesh
 import pymeshfix
-import os   
-CONFIG_PATH = "/Users/adeleyounis/Desktop/Capstone/wAI/config.yaml"
+import os  
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]  # adjust depth if needed
+CONFIG_PATH = REPO_ROOT / "config.yaml"
 
 def load_config(config_path: str):
     """Load and parse YAML configuration."""
@@ -48,7 +51,8 @@ def main(visualize: bool = True, save: bool = True):
         )
 
     # 3) Volume calculation
-    vol = mesh.get_volume()
+    vol = mesh.get_volume() * 1000
+    print(vol)
 
     # 4) Weight estimation
     print("Weight using Open3D volume:")

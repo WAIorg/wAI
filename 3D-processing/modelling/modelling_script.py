@@ -14,7 +14,7 @@ import yaml
 import sys
 import torch
 
-SAM3D_ROOT = "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d"
+SAM3D_ROOT = "C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body"
 sys.path.insert(0, SAM3D_ROOT)
 from sam_3d_body import load_sam_3d_body, SAM3DBodyEstimator
 

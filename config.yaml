@@ -1,11 +1,11 @@
 # config.yaml
 paths:
-  rgb_img_path: "/Users/adeleyounis/Desktop/Capstone/data/adele.png"
-  depth_img_path: "/Users/adeleyounis/Desktop/Capstone/data/depth_adele.npy"
-  pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/point_cloud.ply"
-  sam_pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/sam_point_cloud.ply"
-  sam3d_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d/checkpoints/sam-3d-body-dinov3/model.ckpt'
-  mhr_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
+  rgb_img_path: "C:/Users/wai/wAI/data/20260120_143300_rgb.png"
+  depth_img_path: "C:/Users/wai/wAI/data/20260120_143300_depth.npy"
+  pt_cloud_ply_path: "C:/Users/wai/wAI/data/point_cloud.ply"
+  sam_pt_cloud_ply_path: "C:/Users/wai/wAI/data/sam_point_cloud.ply"
+  sam3d_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/model.ckpt'
+  mhr_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
 
   # archived
   pt_cloud_txt_path: "output/pointcloud.txt"

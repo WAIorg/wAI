@@ -14,6 +14,7 @@ from segment_anything import SamPredictor, sam_model_registry
 import os
 import yaml
 import subprocess
+import urllib.request
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # adjust depth if needed
 CONFIG_PATH = REPO_ROOT / "config.yaml"
@@ -41,7 +42,7 @@ def download_sam():
     url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
     if not os.path.exists(sam_checkpoint):
         print("Downloading SAM checkpoint...")
-        subprocess.run(["wget", "-O", sam_checkpoint, url], check=True)
+        urllib.request.urlretrieve(url, sam_checkpoint)
     else:
         print("SAM checkpoint already exists.")
     print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
@@ -153,6 +154,7 @@ def filter_depth_outliers(depth_map):
     depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
+    print(H, W)
 
     u = np.arange(W) # create pixel grid
     v = np.arange(H)
