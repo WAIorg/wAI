@@ -5,6 +5,8 @@ from fastapi.responses import FileResponse
 from .routers.stream import router as stream_router
 from .routers.capture import router as capture_router
 from .routers.metadata import router as metadata_router
+from .routers.realsense_stream import router as realsense_stream_router
+from .routers.realsense_capture import router as realsense_capture_router
 
 app = FastAPI(title="Kinect Data Collection API")
 
@@ -29,5 +31,7 @@ def alignment_test():
 app.include_router(stream_router)
 app.include_router(capture_router)
 app.include_router(metadata_router)
+app.include_router(realsense_stream_router)
+app.include_router(realsense_capture_router)
 
 

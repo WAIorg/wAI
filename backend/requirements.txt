@@ -7,4 +7,4 @@ pydantic
 numpy
 opencv-python
 python-multipart
-freenect
+pyrealsense2
