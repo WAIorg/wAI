@@ -1,5 +1,6 @@
 @echo off
-echo Starting Interface in Chrome Kiosk Mode...
+setlocal enabledelayedexpansion
+echo Starting Interface in Edge Kiosk Mode...
 echo.
 
 REM Activate virtual environment
@@ -20,39 +21,51 @@ if not exist "node_modules" (
     call npm install
 )
 
-REM Start the Vite dev server in the background
+REM Start the Vite dev server in a new window
 echo Starting Vite dev server...
-start /B npm run dev
+start "Vite Dev Server" cmd /k "npm run dev"
 
-REM Wait a few seconds for the server to start
-timeout /t 3 /nobreak >nul
+REM Wait for the server to start
+echo Waiting for server to start (5 seconds)...
+timeout /t 5 /nobreak >nul
+echo Server should be ready now.
 
-REM Launch Chrome in kiosk mode
-echo Launching Chrome in kiosk mode...
+REM Launch Edge in kiosk mode
+echo Launching Edge in kiosk mode...
 echo Press Alt+F4 or Ctrl+Alt+Delete to exit kiosk mode
 echo.
 
-REM Find Chrome executable (common locations)
-set CHROME_PATH=
-if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
-) else if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
-) else if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe
+REM Find Edge executable (common locations)
+set EDGE_PATH=
+if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
+    set EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+) else if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
+    set EDGE_PATH=C:\Program Files\Microsoft\Edge\Application\msedge.exe
 )
 
-if "%CHROME_PATH%"=="" (
-    echo ERROR: Chrome not found. Please install Google Chrome or update the path in this script.
+if "%EDGE_PATH%"=="" (
+    echo ERROR: Edge not found. Please install Microsoft Edge or update the path in this script.
     pause
     exit /b 1
 )
 
-REM Launch Chrome in kiosk mode pointing to the interface
-start "" "%CHROME_PATH%" --kiosk --app=http://localhost:5174
+REM Launch Edge in kiosk mode pointing to the interface
+echo Launching Edge in kiosk mode...
+echo Edge path: %EDGE_PATH%
+echo URL: http://localhost:5174
+echo.
 
-echo Chrome launched in kiosk mode.
+REM Use the exact command format that works in command prompt
+"%EDGE_PATH%" --kiosk http://localhost:5174
+
+echo.
+echo Edge launch command executed.
 echo The interface should be visible at http://localhost:5174
+echo.
+echo If Edge didn't open, check:
+echo   1. Is Edge installed at: %EDGE_PATH%
+echo   2. Is the dev server running on port 5174?
+echo   3. Try running: launch_interface_kiosk.bat manually
 echo.
 echo To exit kiosk mode, press Alt+F4 or close this window and stop the dev server.
 

@@ -1,27 +1,28 @@
 @echo off
-echo Launching Interface in Chrome Kiosk Mode...
+echo Launching Interface in Edge Kiosk Mode...
 echo.
 
-REM Find Chrome executable (common locations)
-set CHROME_PATH=
-if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
-) else if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
-) else if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" (
-    set CHROME_PATH=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe
+REM Find Edge executable (common locations)
+set EDGE_PATH=
+if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
+    set EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+) else if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
+    set EDGE_PATH=C:\Program Files\Microsoft\Edge\Application\msedge.exe
 )
 
-if "%CHROME_PATH%"=="" (
-    echo ERROR: Chrome not found. Please install Google Chrome.
+if "%EDGE_PATH%"=="" (
+    echo ERROR: Edge not found. Please install Microsoft Edge.
     pause
     exit /b 1
 )
 
-REM Launch Chrome in kiosk mode pointing to the interface
-echo Starting Chrome in kiosk mode at http://localhost:5174
+REM Launch Edge in kiosk mode pointing to the interface
+echo Starting Edge in kiosk mode at http://localhost:5174
 echo Press Alt+F4 to exit kiosk mode
+echo Edge path: %EDGE_PATH%
 echo.
-start "" "%CHROME_PATH%" --kiosk --app=http://localhost:5174
 
-echo Chrome launched successfully!
+REM Use the exact command format that works in command prompt
+"%EDGE_PATH%" --kiosk http://localhost:5174
+
+echo Edge launch command executed!
