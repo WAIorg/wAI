@@ -5,15 +5,12 @@ interface ImagingViewProps {
   height: string
   heightUnit: 'cm' | 'in'
   streamUrl: string
-  busy: boolean
-  processing: boolean
-  captureMessage: string
-  logs: Array<{timestamp: string, type: string, message: string}>
-  weight: string | null
   onSexChange: (sex: 'female' | 'male' | '') => void
   onHeightChange: (height: string) => void
   onHeightUnitChange: (unit: 'cm' | 'in') => void
   onCapture: () => void
+  busy: boolean
+  lastCapture: { rgb_path?: string; depth_path?: string; timestamp?: string } | null
 }
 
 export const ImagingView: React.FC<ImagingViewProps> = ({
@@ -21,15 +18,12 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
   height,
   heightUnit,
   streamUrl,
-  busy,
-  processing,
-  captureMessage,
-  logs,
-  weight,
   onSexChange,
   onHeightChange,
   onHeightUnitChange,
   onCapture,
+  busy,
+  lastCapture,
 }) => {
   return (
     <div className="w-full max-w-6xl">
@@ -42,44 +36,13 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
         {/* Image Display Area with Overlays */}
         <div className="relative flex-shrink-0">
           <div className="relative w-[640px] h-[480px] bg-gray-100 rounded-lg overflow-hidden border-2 border-light-blue">
-            {/* RealSense RGB Stream */}
+            {/* RealSense Video Stream */}
             <img
               src={streamUrl}
               alt="RealSense RGB Stream"
               className="w-full h-full object-cover"
-              onLoad={() => {
-                console.log('Stream image loaded successfully')
-              }}
-              onError={(e) => {
-                console.error('Stream image error:', e)
-                // Fallback to placeholder if stream fails
-                const target = e.currentTarget
-                target.style.display = 'none'
-                const placeholder = target.nextElementSibling as HTMLElement
-                if (placeholder) {
-                  placeholder.style.display = 'flex'
-                }
-              }}
+              style={{ imageRendering: 'auto' }}
             />
-            {/* Fallback placeholder (hidden by default, shown on error) */}
-            <div className="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center absolute inset-0" style={{ display: 'none' }}>
-              <div className="text-gray-400 text-center">
-                <svg
-                  className="w-24 h-24 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-sm">Waiting for stream...</p>
-              </div>
-            </div>
 
             {/* Corner Brackets Overlay */}
             <div className="absolute inset-0 pointer-events-none">
@@ -180,113 +143,47 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
         </div>
       </div>
 
-      {/* Capture Button and Message */}
-      <div className="flex flex-col items-center mt-12 gap-4 w-full max-w-4xl">
+      {/* Capture Button */}
+      <div className="flex flex-col items-center gap-4 mt-12">
         <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            console.log('Button clicked, calling onCapture')
-            try {
-              onCapture()
-              console.log('onCapture called successfully')
-            } catch (err) {
-              console.error('Error calling onCapture:', err)
-            }
-          }}
-          disabled={busy || processing}
+          onClick={onCapture}
+          disabled={busy}
           className={`w-20 h-20 rounded-full transition-colors flex items-center justify-center shadow-lg ${
-            busy || processing
+            busy
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-gray-200 hover:bg-gray-300 cursor-pointer active:scale-95'
+              : 'bg-gray-200 hover:bg-gray-300'
           }`}
           aria-label="Capture image"
         >
-          {processing ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          )}
-        </button>
-        
-        {/* Processing Status */}
-        {processing && (
-          <div className="w-full">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <p className="text-blue-800 font-semibold">Processing 3D model...</p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Weight Display */}
-        {weight && (
-          <div className="w-full">
-            <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-              <p className="text-sm text-green-700 mb-2">Estimated Weight</p>
-              <p className="text-4xl font-bold text-green-800">{weight}</p>
-            </div>
-          </div>
-        )}
-        
-        {/* Capture Message */}
-        {captureMessage && !processing && (
-          <p
-            className={`text-sm px-4 py-2 rounded ${
-              captureMessage.startsWith('Error')
-                ? 'text-red-600 bg-red-50'
-                : 'text-green-600 bg-green-50'
-            }`}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-10 w-10 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
           >
-            {captureMessage}
-          </p>
-        )}
-        
-        {/* Processing Logs */}
-        {logs.length > 0 && (
-          <div className="w-full mt-4">
-            <div className="bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
-              <div className="text-xs font-mono space-y-1">
-                {logs.map((log, idx) => (
-                  <div
-                    key={idx}
-                    className={`${
-                      log.type === 'error'
-                        ? 'text-red-400'
-                        : log.type === 'success'
-                        ? 'text-green-400'
-                        : log.type === 'weight'
-                        ? 'text-yellow-400 font-bold'
-                        : 'text-gray-300'
-                    }`}
-                  >
-                    <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
-                    {log.message}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        </button>
+        {lastCapture && (
+          <div className="text-sm text-gray-600 text-center">
+            <p className="font-semibold text-green-600">✓ Captured successfully!</p>
+            <p className="text-xs mt-1">
+              RGB: {lastCapture.rgb_path?.split(/[/\\]/).pop()}
+            </p>
+            <p className="text-xs">
+              Depth: {lastCapture.depth_path?.split(/[/\\]/).pop()}
+            </p>
           </div>
         )}
       </div>

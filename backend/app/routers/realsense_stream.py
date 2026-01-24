@@ -22,10 +22,10 @@ router = APIRouter(prefix="/realsense_stream", tags=["realsense_stream"])
 
 @router.get("/rgb")
 def stream_rgb(realsense: RealSenseService = Depends(get_realsense_service)):
-    """Stream RGB frames from RealSense camera as MJPEG."""
+    """MJPEG multipart stream of RGB frames from RealSense camera."""
     def frame_generator():
         while True:
-            rgb = realsense.get_latest_rgb()
+            rgb, _ = realsense.get_latest()
             if rgb is None:
                 # No frame yet
                 yield b"--frame\r\nContent-Type: text/plain\r\n\r\nwaiting\r\n"

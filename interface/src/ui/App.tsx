@@ -1,251 +1,144 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Header } from './components/Header'
 import { ImagingView } from './components/ImagingView'
 import { ProgressIndicator } from './components/ProgressIndicator'
+import { ProcessingView } from './components/ProcessingView'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
-
-console.log('API_BASE:', API_BASE)
-console.log('Environment:', import.meta.env)
-
-// Expose test function to window for manual testing
-if (typeof window !== 'undefined') {
-  (window as any).testRealsenseCapture = async () => {
-    const url = `${API_BASE}/realsense_capture/image`
-    console.log('Manual test - Fetching:', url)
-    try {
-      const res = await fetch(url, { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'cors'
-      })
-      console.log('Manual test - Response:', res)
-      const json = await res.json()
-      console.log('Manual test - JSON:', json)
-      return json
-    } catch (err) {
-      console.error('Manual test - Error:', err)
-      throw err
-    }
-  }
-  console.log('Test function available: window.testRealsenseCapture()')
-}
 
 export const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'calibration' | 'imaging' | 'data-processing'>('imaging')
   const [sex, setSex] = useState<'female' | 'male' | ''>('')
-
-  const handleSexChange = (newSex: 'female' | 'male' | '') => {
-    setSex(newSex)
-  }
   const [height, setHeight] = useState('')
   const [heightUnit, setHeightUnit] = useState<'cm' | 'in'>('cm')
   const [busy, setBusy] = useState(false)
-  const [captureMessage, setCaptureMessage] = useState<string>('')
-  const [processing, setProcessing] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [logs, setLogs] = useState<Array<{timestamp: string, type: string, message: string}>>([])
-  const [weight, setWeight] = useState<string | null>(null)
+  const [lastCapture, setLastCapture] = useState<{ rgb_path?: string; depth_path?: string; timestamp?: string } | null>(null)
+  
+  // Processing state
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [processingLogs, setProcessingLogs] = useState<string[]>([])
+  const [processingResult, setProcessingResult] = useState<{
+    success: boolean
+    volume?: number
+    weight?: number
+    sex?: string
+    height?: number
+    error?: string
+  } | null>(null)
 
-  const streamUrl = useMemo(() => {
-    const url = `${API_BASE}/realsense_stream/rgb`
-    console.log('Stream URL:', url)
-    return url
-  }, [])
-
-  // Test backend connection on mount
-  useEffect(() => {
-    console.log('Testing backend connection...')
-    const healthUrl = `${API_BASE}/health`
-    console.log('Health check URL:', healthUrl)
-    
-    // Test if fetch is available
-    console.log('Fetch available:', typeof fetch !== 'undefined')
-    
-    const testFetch = async () => {
-      try {
-        console.log('Starting health check fetch...')
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000)
-        
-        const res = await fetch(healthUrl, { 
-          mode: 'cors',
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
-        
-        console.log('Health check response status:', res.status)
-        const data = await res.json()
-        console.log('Backend health check success:', data)
-      } catch (err) {
-        console.error('Backend connection failed:', err)
-        console.error('Error details:', err)
-        if (err instanceof Error) {
-          console.error('Error name:', err.name)
-          console.error('Error message:', err.message)
-        }
-      }
-    }
-    
-    testFetch()
-  }, [])
+  const streamUrl = useMemo(() => `${API_BASE}/realsense_stream/rgb`, [])
 
   const handleCapture = async () => {
-    console.log('Capture button clicked')
-    console.log('API_BASE:', API_BASE)
+    if (busy) return
+    
     setBusy(true)
-    setCaptureMessage('')
-    
-    const url = `${API_BASE}/realsense_capture/image`
-    console.log('Fetching URL:', url)
-    console.log('About to call fetch...')
-    
-    // Prepare request body with sex and height
-    const requestBody = {
-      sex: sex || null,
-      height: height || null
-    }
-    console.log('Request body:', requestBody)
-    
+    setProcessingLogs([])
+    setProcessingResult(null)
     try {
-      console.log('Calling fetch now...')
-      const fetchPromise = fetch(url, { 
+      // Format height with unit
+      const heightValue = height ? `${height} ${heightUnit}` : null
+      
+      const res = await fetch(`${API_BASE}/realsense_capture/image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'cors',
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          height: heightValue,
+          sex: sex || null,
+        }),
       })
-      console.log('Fetch promise created:', fetchPromise)
-      
-      const res = await fetchPromise
-      console.log('Response received:', res)
-      console.log('Response status:', res.status)
-      console.log('Response headers:', res.headers)
-      
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error('Response error:', errorText)
-        setCaptureMessage(`Error: ${res.status} ${res.statusText}`)
-        setBusy(false)
-        return
-      }
-      
       const json = await res.json()
-      console.log('Response JSON:', json)
-      
       if (json.success) {
-        setCaptureMessage(`Image captured! Starting 3D processing...`)
-        setProcessing(true)
-        setSessionId(json.session_id)
-        setLogs([])
-        setWeight(null)
+        setLastCapture({
+          rgb_path: json.rgb_path,
+          depth_path: json.depth_path,
+          timestamp: json.timestamp,
+        })
+        console.log('Image captured:', json)
         
-        // Start listening to logs if session_id is provided
-        if (json.session_id) {
-          startLogStream(json.session_id)
-        }
+        // Automatically start processing after capture
+        startProcessing()
       } else {
-        setCaptureMessage(`Error: ${json.message || 'Failed to capture image'}`)
-        setBusy(false)
+        console.error('Capture failed')
+        alert('Failed to capture image. Make sure the RealSense camera is connected.')
       }
     } catch (error) {
-      console.error('Fetch error caught:', error)
-      console.error('Error type:', typeof error)
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'no stack'
-      })
-      setCaptureMessage(`Error: ${error instanceof Error ? error.message : 'Failed to capture image'}`)
+      console.error('Error capturing image:', error)
+      alert('Error capturing image. Check backend connection.')
     } finally {
-      console.log('Finally block - setting busy to false')
-      // Don't set busy to false here - let the log stream handle it
-    }
-  }
-
-  const startLogStream = (sessionId: string) => {
-    console.log(`[LOG STREAM] Starting log stream for session: ${sessionId}`)
-    // Close existing connection if any
-    if (eventSourceRef.current) {
-      console.log('[LOG STREAM] Closing existing EventSource')
-      eventSourceRef.current.close()
-    }
-    
-    const logUrl = `${API_BASE}/realsense_capture/logs/${sessionId}`
-    console.log(`[LOG STREAM] Connecting to: ${logUrl}`)
-    const eventSource = new EventSource(logUrl)
-    eventSourceRef.current = eventSource
-    
-    eventSource.onopen = () => {
-      console.log('[LOG STREAM] EventSource connection opened')
-    }
-    
-    eventSource.onmessage = (event) => {
-      console.log('[LOG STREAM] Received message:', event.data)
-      try {
-        const logEntry = JSON.parse(event.data)
-        
-        if (logEntry.type === 'end') {
-          console.log('[LOG STREAM] End signal received, closing connection')
-          eventSource.close()
-          eventSourceRef.current = null
-          setProcessing(false)
-          setBusy(false)
-          return
-        }
-        
-        // Add log entry
-        setLogs(prev => [...prev, logEntry])
-        
-        // Extract weight from log messages
-        const message = logEntry.message || ''
-        // Look for weight patterns from weight_formula output
-        // Pattern: "The estimated weight is: 70.50 kg or 155.43 lbs"
-        const weightMatch = message.match(/estimated weight is:\s*(\d+\.?\d*)\s*kg/i)
-        if (weightMatch) {
-          setWeight(`${weightMatch[1]} kg`)
-        }
-        
-        // Check for success completion
-        if (logEntry.type === 'success') {
-          setProcessing(false)
-          setBusy(false)
-        }
-        
-        // Check for errors
-        if (logEntry.type === 'error') {
-          // Don't stop processing on errors, just log them
-        }
-      } catch (err) {
-        console.error('Error parsing log entry:', err)
-      }
-    }
-    
-    eventSource.onerror = (error) => {
-      console.error('[LOG STREAM] EventSource error:', error)
-      console.error('[LOG STREAM] EventSource readyState:', eventSource.readyState)
-      // readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-      if (eventSource.readyState === EventSource.CLOSED) {
-        console.error('[LOG STREAM] Connection closed unexpectedly')
-      }
-      eventSource.close()
-      eventSourceRef.current = null
-      setProcessing(false)
       setBusy(false)
     }
   }
-  
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-        eventSourceRef.current = null
+
+  const startProcessing = async () => {
+    setIsProcessing(true)
+    setProcessingLogs([])
+    setProcessingResult(null)
+    
+    // Extract numeric height if provided
+    const heightValue = height ? parseFloat(height) : null
+    
+    try {
+      const response = await fetch(`${API_BASE}/processing/run/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          use_most_recent: true,
+          sex: sex || null,
+          height: heightValue,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to start processing')
       }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('No response body')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6) // Remove 'data: ' prefix
+            
+            // Check if this is a result message
+            if (data.startsWith('RESULT:')) {
+              try {
+                const resultJson = JSON.parse(data.slice(7)) // Remove 'RESULT:' prefix
+                setProcessingResult(resultJson)
+                setIsProcessing(false)
+              } catch (e) {
+                console.error('Error parsing result:', e)
+              }
+            } else {
+              // Regular log line
+              setProcessingLogs(prev => [...prev, data])
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error during processing:', error)
+      setProcessingResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      setIsProcessing(false)
     }
-  }, [])
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -256,15 +149,17 @@ export const App: React.FC = () => {
           height={height}
           heightUnit={heightUnit}
           streamUrl={streamUrl}
-          busy={busy}
-          processing={processing}
-          captureMessage={captureMessage}
-          logs={logs}
-          weight={weight}
-          onSexChange={handleSexChange}
+          onSexChange={setSex}
           onHeightChange={setHeight}
           onHeightUnitChange={setHeightUnit}
           onCapture={handleCapture}
+          busy={busy || isProcessing}
+          lastCapture={lastCapture}
+        />
+        <ProcessingView
+          isProcessing={isProcessing}
+          logs={processingLogs}
+          result={processingResult}
         />
       </div>
       <ProgressIndicator currentStep={currentStep} />

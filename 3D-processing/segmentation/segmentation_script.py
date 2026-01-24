@@ -38,61 +38,58 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
-    sam_checkpoint = "sam_vit_h.pth"
-    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
-    expected_size = 2564550879  # Expected file size in bytes (~2.39 GB)
+    # Check for existing checkpoint in 3D-processing folder first
+    repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
+    possible_locations = [
+        repo_root / "sam_vit_h.pth",  # Root of 3D-processing
+        repo_root / "checkpoints" / "sam_vit_h.pth",  # checkpoints subfolder
+        repo_root / "segmentation" / "sam_vit_h.pth",  # segmentation folder
+        Path("sam_vit_h.pth"),  # Current directory (fallback)
+    ]
     
-    # Check if file exists and is valid
-    file_exists = os.path.exists(sam_checkpoint)
-    file_valid = False
+    sam_checkpoint = None
+    for location in possible_locations:
+        if location.exists():
+            sam_checkpoint = str(location.resolve())
+            print(f"Found existing SAM checkpoint at: {sam_checkpoint}")
+            break
     
-    if file_exists:
-        file_size = os.path.getsize(sam_checkpoint)
-        print(f"Found existing SAM checkpoint (size: {file_size / (1024**3):.2f} GB)")
-        
-        # Check if file size matches expected size (allow small tolerance)
-        if abs(file_size - expected_size) < 1000:  # Within 1KB tolerance
-            # Try to verify it's a valid PyTorch/ZIP file
-            try:
-                import zipfile
-                # Try to open as ZIP to verify structure
-                with zipfile.ZipFile(sam_checkpoint, 'r') as zip_ref:
-                    # Check if we can read the central directory
-                    zip_ref.testzip()  # Returns None if valid, or list of bad files if corrupted
-                    file_valid = True
-                    print("SAM checkpoint file validation passed.")
-            except (zipfile.BadZipFile, RuntimeError, Exception) as e:
-                print(f"SAM checkpoint file validation failed: {e}")
-                file_valid = False
+    if sam_checkpoint is None:
+        # If not found, try to download to 3D-processing root
+        sam_checkpoint = str(repo_root / "sam_vit_h.pth")
+        url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+        if not os.path.exists(sam_checkpoint):
+            print("Downloading SAM checkpoint...")
+            urllib.request.urlretrieve(url, sam_checkpoint)
         else:
-            print(f"File size mismatch: got {file_size} bytes, expected {expected_size} bytes")
-            file_valid = False
-        
-        if not file_valid:
-            print("SAM checkpoint file appears corrupted. Deleting and re-downloading...")
-            try:
-                os.remove(sam_checkpoint)
-                print("Corrupted file deleted.")
-            except Exception as e:
-                print(f"Warning: Could not delete corrupted file: {e}")
-                print("Please manually delete the file and re-run.")
-            file_exists = False
-    
-    if not file_exists:
-        print("Downloading SAM checkpoint...")
-        print("This may take several minutes (file is ~2.4 GB)...")
-        urllib.request.urlretrieve(url, sam_checkpoint)
-        print("Download complete!")
-    else:
-        print("SAM checkpoint already exists and is valid.")
-    print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
+            print("SAM checkpoint already exists.")
+        print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
     
     return os.path.abspath(sam_checkpoint), device
 
 # YOLO person recognition 
 def person_recognition(frame_rgb, visualize=False):
+    # Check for existing YOLO checkpoint in 3D-processing folder first
+    repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
+    possible_locations = [
+        repo_root / "yolov8n.pt",  # Root of 3D-processing
+        repo_root / "checkpoints" / "yolov8n.pt",  # checkpoints subfolder
+        repo_root / "segmentation" / "yolov8n.pt",  # segmentation folder
+    ]
     
-    model = YOLO("yolov8n.pt")
+    yolo_checkpoint = None
+    for location in possible_locations:
+        if location.exists():
+            yolo_checkpoint = str(location.resolve())
+            print(f"Found existing YOLO checkpoint at: {yolo_checkpoint}")
+            break
+    
+    # YOLO will auto-download if not found, but prefer local checkpoint if available
+    if yolo_checkpoint:
+        model = YOLO(yolo_checkpoint)
+    else:
+        model = YOLO("yolov8n.pt")  # Will auto-download if not found
+    
     print("YOLOv8 model loaded:", type(model))
     frame_rgb = cv2.imread(frame_rgb)
     if frame_rgb is None:
@@ -123,15 +120,7 @@ def person_recognition(frame_rgb, visualize=False):
 
 # segment person from image with SAM
 def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False):
-    try:
-        sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
-    except RuntimeError as e:
-        if "failed reading zip archive" in str(e) or "central directory" in str(e):
-            print(f"ERROR: SAM checkpoint file appears to be corrupted: {sam_checkpoint}")
-            print("Please delete the file and re-run. The script will automatically re-download it.")
-            print(f"Delete this file: {os.path.abspath(sam_checkpoint)}")
-            raise RuntimeError(f"SAM checkpoint corrupted. Please delete {sam_checkpoint} and re-run to trigger re-download.") from e
-        raise
+    sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
 
     predictor = SamPredictor(sam) # SAM predictor
     predictor.set_image(img_rgb) # set image to predict on
