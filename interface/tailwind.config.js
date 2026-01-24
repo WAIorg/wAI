@@ -11,6 +11,9 @@ export default {
         'light-blue': '#51B6FF',
         'accent-blue': '#2F80ED',
       },
+      fontFamily: {
+        sans: ['Nunito', 'sans-serif'],
+      },
     },
   },
   plugins: [],

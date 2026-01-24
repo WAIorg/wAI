@@ -7,7 +7,7 @@ import { ProcessingView } from './components/ProcessingView'
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
 export const App: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'calibration' | 'imaging' | 'data-processing'>('imaging')
+  const [currentStep, setCurrentStep] = useState<'imaging' | 'data-processing' | 'weight-output'>('imaging')
   const [sex, setSex] = useState<'female' | 'male' | ''>('')
   const [height, setHeight] = useState('')
   const [heightUnit, setHeightUnit] = useState<'cm' | 'in'>('cm')
@@ -75,6 +75,7 @@ export const App: React.FC = () => {
     setIsProcessing(true)
     setProcessingLogs([])
     setProcessingResult(null)
+    setCurrentStep('data-processing') // Update progress indicator
     
     // Extract numeric height if provided
     const heightValue = height ? parseFloat(height) : null
@@ -137,31 +138,54 @@ export const App: React.FC = () => {
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       setIsProcessing(false)
+      setCurrentStep('imaging') // Return to imaging step on error
     }
   }
+
+  // Update step based on processing state
+  useEffect(() => {
+    if (processingResult) {
+      if (processingResult.success) {
+        setCurrentStep('weight-output')
+      } else {
+        setCurrentStep('imaging')
+      }
+    }
+  }, [processingResult])
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
-        <ImagingView
-          sex={sex}
-          height={height}
-          heightUnit={heightUnit}
-          streamUrl={streamUrl}
-          onSexChange={setSex}
-          onHeightChange={setHeight}
-          onHeightUnitChange={setHeightUnit}
-          onCapture={handleCapture}
-          busy={busy || isProcessing}
-          lastCapture={lastCapture}
-        />
+      {isProcessing || processingResult ? (
+        // Full-screen processing view
         <ProcessingView
           isProcessing={isProcessing}
           logs={processingLogs}
           result={processingResult}
+          onClose={() => {
+            setIsProcessing(false)
+            setProcessingLogs([])
+            setProcessingResult(null)
+            setCurrentStep('imaging')
+          }}
         />
-      </div>
+      ) : (
+        // Normal imaging view
+        <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
+          <ImagingView
+            sex={sex}
+            height={height}
+            heightUnit={heightUnit}
+            streamUrl={streamUrl}
+            onSexChange={setSex}
+            onHeightChange={setHeight}
+            onHeightUnitChange={setHeightUnit}
+            onCapture={handleCapture}
+            busy={busy}
+            lastCapture={lastCapture}
+          />
+        </div>
+      )}
       <ProgressIndicator currentStep={currentStep} />
     </div>
   )
