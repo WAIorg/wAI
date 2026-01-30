@@ -7,36 +7,6 @@ paths:
   sam3d_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/model.ckpt'
   mhr_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
 
-  # archived
-  pt_cloud_txt_path: "output/pointcloud.txt"
-  smplx_model_path: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/models/smplx'
-  vposer_model_path: /Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/models/vposer_v1_0'
-  pixie_dir: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/models/PIXIE'
-  openpose_path: "posture-estimator/human-pose-estimation-opencv/openpose.py"
-  pose_output_dir: 'output/'
-  pose_estimator_nn_path: "posture-estimator/human-pose-estimation-opencv/graph_opt.pb"
- 
-downsampling:
-  voxel_size: 0.005
-  normal_radius: 0.05
-  normal_max_nn: 30
-
-inflation:
-  inflate_amount: 5.0
-
-cleaning:
-  nb_neighbors: 20
-  std_ratio: 2.0
-  smooth_voxel_size: 0.001
-
-mesh:
-  alpha: 0.1
-  merge_threshold: 0.002
-  mirror_offset: [0, 0, -0.1]
-
-voxelization:
-  voxel_size: 0.01  # in meters
-
 camera:
 fx: 596.25827383
 fy: 593.35350108

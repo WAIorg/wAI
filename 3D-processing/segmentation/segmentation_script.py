@@ -38,8 +38,8 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
-    sam_checkpoint = "sam_vit_h.pth"
-    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+    sam_checkpoint = "sam_vit_l_0b3195.pth"
+    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
     if not os.path.exists(sam_checkpoint):
         print("Downloading SAM checkpoint...")
         urllib.request.urlretrieve(url, sam_checkpoint)
@@ -83,7 +83,7 @@ def person_recognition(frame_rgb, visualize=False):
 
 # segment person from image with SAM
 def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False):
-    sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
+    sam = sam_model_registry["vit_l"](checkpoint=sam_checkpoint).to(device)
 
     predictor = SamPredictor(sam) # SAM predictor
     predictor.set_image(img_rgb) # set image to predict on
