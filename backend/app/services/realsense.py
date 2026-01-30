@@ -64,8 +64,14 @@ class RealSenseService:
 
             # Create align object to register depth to color
             align_to = rs.stream.color
-            self._align = rs.align(align_to)
 
+            # print intrinsics
+            col_stream = profile.get_stream(align_to)
+            intr = col_stream.as_video_stream_profile().get_intrinsics()
+            fx, fy, cx, cy = intr.fx, intr.fy, intr.ppx, intr.pyy
+            print("fx, fy, cx, cy: ", fx, fy, cx, cy)
+
+            self._align = rs.align(align_to)
             self._running = True
             self._thread = threading.Thread(target=self._capture_loop, daemon=True)
             self._thread.start()
