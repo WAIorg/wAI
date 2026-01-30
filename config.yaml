@@ -1,6 +1,6 @@
 # config.yaml
 paths:
-  rgb_img_path: "C:/Users/wai/wAI/data/20260120_143300_rgb.png"
+  rgb_img_path: "C:/Users/wai/wAI/data/IMG_3023.JPG"
   depth_img_path: "C:/Users/wai/wAI/data/20260120_143300_depth.npy"
   pt_cloud_ply_path: "C:/Users/wai/wAI/data/point_cloud.ply"
   sam_pt_cloud_ply_path: "C:/Users/wai/wAI/data/sam_point_cloud.ply"
@@ -15,4 +15,4 @@ cy: 246.72323964
 
 inputs:
   sex: "Female" # "Female" or "Male"
-  height: 155 # in cm, optional
+  height: 162 # in cm, optional

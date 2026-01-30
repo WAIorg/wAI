@@ -196,7 +196,8 @@ def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+# def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+def run_pipeline(frame_rgb, visualize=False, save=False):
     print("Starting segmentation pipeline...")
     
     sam_checkpoint, device = download_sam()
@@ -204,20 +205,22 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
 
     # 2) SAM person segmentation
-    person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
+    # person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
     
-    # 3) Overlay segmentation with depth
-    depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
-    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
+    # # 3) Overlay segmentation with depth
+    # depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
+    # filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     
-    # 4) Create point cloud
-    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
-    print("Finished processing point cloud")
+    # # 4) Create point cloud
+    # point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
+    # print("Finished processing point cloud")
 
-    return point_cloud, img_rgb, x1, y1, x2, y2
+    # return point_cloud, img_rgb, x1, y1, x2, y2
+    return img_rgb, x1, y1, x2, y2
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
     frame_rgb=paths["rgb_img_path"]
-    depth_arr=paths["depth_img_path"]
+    # depth_arr=paths["depth_img_path"]
     point_cloud = run_pipeline(frame_rgb, depth_arr, True)
+    point_cloud = run_pipeline(frame_rgb, True)

@@ -53,13 +53,33 @@ def init_sam3d(sam3d_ckpt, mhr_path, device):
 
 
 def create_pose_sam3d(img, x1, y1, x2, y2,estimator, device, visualize: bool = False): 
-    K = np.array([
-        [638.19, 0.0,638.19],
-        [0.0,639.70,246.72323964],
-        [0.0,0.0,356.18],
-    ], dtype=np.float32)
+    print(img.shape)
+    # old 
+    # K = np.array([
+    #     [638.19, 0.0,638.19],
+    #     [0.0,639.70,246.72323964],
+    #     [0.0,0.0,356.18],
+    # ], dtype=np.float32)
 
-    cam_int = torch.tensor(K, dtype=torch.float32, device=device).unsqueeze(0)
+    # actual
+    # K = np.array([
+    #     [613.34423828125, 0.0,319.58001708984375],
+    #     [0.0,613.6818237304688, 243.021728515625],
+    #     [0.0,0.0,1],
+    # ], dtype=np.float32)
+
+    K = np.array([
+        [1509.0, 0.0,1158.0],
+        [0.0,1509.0, 1544.0],
+        [0.0,0.0,1],
+    ], dtype=np.float32)
+    K_crop = K.copy()
+    K_crop[0, 2] -= x1
+    K_crop[1, 2] -= y1
+
+    cam_int = torch.tensor(K_crop, dtype=torch.float32, device=device).unsqueeze(0)
+
+    # cam_int = torch.tensor(K, dtype=torch.float32, device=device).unsqueeze(0)
     outputs = estimator.process_one_image(
         img,                 
         bboxes=np.array([[x1,y1,x2,y2]], dtype=np.float32),
@@ -230,24 +250,25 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True):
+# def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True):
+def main(img_rgb, x1, y1, x2, y2, visualize: bool = True, save: bool = True):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D
     print("Initializing SAM3D estimator...")
     sam3d_estimator = init_sam3d(paths["sam3d_model_checkpoint"], paths["mhr_model_checkpoint"], device)
     verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, sam3d_estimator, device)
-    sam_pcd = prealign_best(verts, point_cloud)
+    # sam_pcd = prealign_best(verts, point_cloud)
 
-    if visualize:
-        point_cloud.paint_uniform_color([0.7, 0.7, 0.7])
-        sam_pcd.paint_uniform_color([1.0, 0.0, 0.0])
-        o3d.visualization.draw_geometries([point_cloud, sam_pcd])
+    # if visualize:
+    #     point_cloud.paint_uniform_color([0.7, 0.7, 0.7])
+    #     sam_pcd.paint_uniform_color([1.0, 0.0, 0.0])
+    #     o3d.visualization.draw_geometries([point_cloud, sam_pcd])
 
-    if save:
-        o3d.io.write_point_cloud(paths["sam_pt_cloud_ply_path"], sam_pcd)
-        print("SAM point cloud saved at:", paths["sam_pt_cloud_ply_path"])
-    print("SAM3D pose created. Proceeding to ICP alignment...")
+    # if save:
+    #     o3d.io.write_point_cloud(paths["sam_pt_cloud_ply_path"], sam_pcd)
+    #     print("SAM point cloud saved at:", paths["sam_pt_cloud_ply_path"])
+    # print("SAM3D pose created. Proceeding to ICP alignment...")
 
     # 2) Run ICP registration
     # if we want to save sam3d pcd (not needed for pipeline)
@@ -255,7 +276,7 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
 
     faces = np.asarray(sam3d_estimator.faces) 
     sam_mesh = get_mesh(verts, faces)
-    mesh_aligned = mesh_icp_registration(point_cloud, sam_mesh)
+    # mesh_aligned = mesh_icp_registration(point_cloud, sam_mesh)
     
     # sanity view
     if visualize:
@@ -264,7 +285,8 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
         o3d.visualization.draw_geometries([point_cloud, mesh_aligned])
 
     # 3) Make watertight mesh 
-    watertight_mesh = utils.make_watertight_meshfix(mesh_aligned)
+    # watertight_mesh = utils.make_watertight_meshfix(mesh_aligned)
+    watertight_mesh = utils.make_watertight_meshfix(sam_mesh)
     
     if save:
         o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", watertight_mesh)
