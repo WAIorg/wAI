@@ -1,10 +1,30 @@
 import React from 'react'
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onSettingsClick?: () => void
+}
+
+export const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
   return (
     <header className="bg-dark-blue w-full px-4 py-2 flex items-center justify-between">
-      {/* Settings Icon */}
-      <button className="text-white hover:opacity-80 transition-opacity">
+      {/* Spacer for balance */}
+      <div className="w-12 h-12" />
+
+      {/* Logo */}
+      <div className="flex items-center">
+        <img
+          src="/wAI_2.png"
+          alt="wAI Logo"
+          className="h-36 w-auto"
+        />
+      </div>
+
+      {/* Settings Icon (replaces help) */}
+      <button
+        onClick={onSettingsClick}
+        className="text-white hover:opacity-80 transition-opacity"
+        aria-label="Open settings"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-12 w-12"
@@ -22,33 +42,6 @@ export const Header: React.FC = () => {
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      </button>
-
-      {/* Logo */}
-      <div className="flex items-center">
-        <img
-          src="/wAI_2.png"
-          alt="wAI Logo"
-          className="h-36 w-auto"
-        />
-      </div>
-
-      {/* Help Icon */}
-      <button className="text-white hover:opacity-80 transition-opacity">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-12 w-12"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
       </button>

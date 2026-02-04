@@ -105,6 +105,7 @@ def person_recognition(frame_rgb, visualize=False):
 
     x1, y1, x2, y2, conf = max(person_boxes, key=lambda b: b[4]) # extract box
     print(f"Person detected with confidence {conf:.2f}")
+    # Note: progress callback is handled in run_pipeline
 
     if visualize:
         # display
@@ -233,23 +234,40 @@ def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False, progress_callback=None):
     print("Starting segmentation pipeline...")
+    if progress_callback:
+        progress_callback(0, "Starting segmentation pipeline...")
     
+    if progress_callback:
+        progress_callback(5, "Loading SAM model...")
     sam_checkpoint, device = download_sam()
+    
     # 1) YOLO person recognition
+    if progress_callback:
+        progress_callback(10, "Detecting person in image...")
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
+    
+    if progress_callback:
+        progress_callback(20, "Person detected, creating segmentation mask...")
 
     # 2) SAM person segmentation
     person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
     
+    if progress_callback:
+        progress_callback(30, "Overlaying segmentation with depth data...")
     # 3) Overlay segmentation with depth
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     
+    if progress_callback:
+        progress_callback(40, "Creating point cloud from depth data...")
     # 4) Create point cloud
     point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
     print("Finished processing point cloud")
+    
+    if progress_callback:
+        progress_callback(50, "Segmentation complete")
 
     return point_cloud, img_rgb, x1, y1, x2, y2
 

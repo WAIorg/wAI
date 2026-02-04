@@ -93,6 +93,72 @@ def get_most_recent_capture(data_dir: str = "data") -> Optional[Tuple[str, str]]
     return (most_recent_rgb, depth_file)
 
 
+def update_csv_with_processing_results(
+    data_dir: str = "data",
+    rgb_path: str = None,
+    processing_time_seconds: float = None,
+    volume_cm3: float = None,
+    estimated_weight_kg: float = None
+) -> bool:
+    """
+    Update the CSV row for a given RGB path with processing results.
+    Returns True if update was successful, False otherwise.
+    """
+    import csv
+    
+    csv_path = os.path.join(data_dir, "captures.csv")
+    if not os.path.exists(csv_path):
+        return False
+    
+    try:
+        # Read all rows
+        rows = []
+        with open(csv_path, 'r', newline='') as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            rows.append(header)
+            for row in reader:
+                rows.append(row)
+        
+        # Find and update the matching row
+        updated = False
+        rgb_path_normalized = os.path.normpath(rgb_path) if rgb_path else None
+        
+        for i, row in enumerate(rows[1:], start=1):  # Skip header
+            if len(row) > 0 and rgb_path_normalized:
+                row_rgb_path = os.path.normpath(row[0])
+                if row_rgb_path == rgb_path_normalized:
+                    # Ensure row has enough columns
+                    while len(row) < len(rows[0]):
+                        row.append('')
+                    
+                    # Update processing columns (indices 7, 8, 9)
+                    if len(row) >= 10:
+                        if processing_time_seconds is not None:
+                            row[7] = f"{processing_time_seconds:.2f}"
+                        if volume_cm3 is not None:
+                            row[8] = f"{volume_cm3:.2f}"
+                        if estimated_weight_kg is not None:
+                            row[9] = f"{estimated_weight_kg:.2f}"
+                    updated = True
+                    break
+        
+        if updated:
+            # Write all rows back
+            with open(csv_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(rows)
+            return True
+        else:
+            print(f"Warning: Could not find CSV row for RGB path: {rgb_path}")
+            return False
+    except Exception as e:
+        print(f"Error updating CSV with processing results: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def get_metadata_from_csv(data_dir: str = "data", rgb_path: str = None) -> dict:
     """
     Get metadata (height, sex) from CSV for a given RGB path.
@@ -133,10 +199,11 @@ def get_metadata_from_csv(data_dir: str = "data", rgb_path: str = None) -> dict:
 
 class LogCapture:
     """Capture stdout/stderr and yield lines in real-time."""
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, progress_callback=None):
         self.logs = []
         self.lock = threading.Lock()
         self.callback = callback
+        self.progress_callback = progress_callback
     
     def write(self, text):
         with self.lock:
@@ -151,6 +218,11 @@ class LogCapture:
     def get_logs(self):
         with self.lock:
             return ''.join(self.logs)
+    
+    def update_progress(self, progress, step_message):
+        """Update progress and emit progress message."""
+        if self.progress_callback:
+            self.progress_callback(progress, step_message)
 
 
 def run_3d_processing(
@@ -159,13 +231,22 @@ def run_3d_processing(
     sex: str = None,
     height: float = None,
     use_most_recent: bool = True,
-    log_capture: Optional[LogCapture] = None
+    log_capture: Optional[LogCapture] = None,
+    progress_callback=None,
+    capture_start_time: float = None
 ) -> dict:
     """
     Run the 3D processing pipeline.
     If use_most_recent is True, uses the most recent capture from data folder.
     Otherwise uses provided paths.
+    
+    Args:
+        capture_start_time: Unix timestamp when capture started (for calculating processing duration)
     """
+    import time
+    
+    processing_start_time = time.time()
+    
     if use_most_recent:
         result = get_most_recent_capture()
         if result is None:
@@ -208,20 +289,37 @@ def run_3d_processing(
             sys.stderr = log_capture
         
         try:
-            # Run the processing pipeline
+            # Run the processing pipeline with progress callback
             result = run_processing_pipeline(
                 rgb_path=rgb_path,
                 depth_path=depth_path,
                 sex=sex_normalized,
                 height=height,
                 visualize=False,
-                save=True
+                save=True,
+                progress_callback=progress_callback
             )
         finally:
             # Restore stdout/stderr
             if log_capture:
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
+        
+        # Calculate processing time
+        processing_end_time = time.time()
+        if capture_start_time:
+            processing_time_seconds = processing_end_time - capture_start_time
+        else:
+            processing_time_seconds = processing_end_time - processing_start_time
+        
+        # Update CSV with processing results if successful
+        if result.get("success", True) and "error" not in result:
+            update_csv_with_processing_results(
+                rgb_path=rgb_path,
+                processing_time_seconds=processing_time_seconds,
+                volume_cm3=result.get("volume", 0),
+                estimated_weight_kg=result.get("weight", 0)
+            )
         
         return {
             "success": True,
@@ -246,23 +344,29 @@ def run_3d_processing_streaming(
     depth_path: str = None,
     sex: str = None,
     height: float = None,
-    use_most_recent: bool = True
+    use_most_recent: bool = True,
+    capture_start_time: float = None
 ) -> Generator[str, None, None]:
     """
-    Run 3D processing with streaming logs.
-    Yields log lines and final result as JSON.
+    Run 3D processing with streaming logs and progress updates.
+    Yields log lines, progress updates, and final result as JSON.
     """
     import queue
     import json
     
     log_queue = queue.Queue()
+    progress_queue = queue.Queue()
     result_queue = queue.Queue()
     
     def log_callback(text):
         """Callback to receive log output"""
         log_queue.put(text)
     
-    log_capture = LogCapture(callback=log_callback)
+    def progress_callback(progress, step_message):
+        """Callback to receive progress updates"""
+        progress_queue.put((progress, step_message))
+    
+    log_capture = LogCapture(callback=log_callback, progress_callback=progress_callback)
     
     # Run processing in a thread to capture logs
     def run_processing():
@@ -273,7 +377,9 @@ def run_3d_processing_streaming(
                 sex=sex,
                 height=height,
                 use_most_recent=use_most_recent,
-                log_capture=log_capture
+                log_capture=log_capture,
+                progress_callback=lambda p, m: progress_callback(p, m),
+                capture_start_time=capture_start_time
             )
             result_queue.put(result)
         except Exception as e:
@@ -283,11 +389,19 @@ def run_3d_processing_streaming(
     processing_thread = threading.Thread(target=run_processing, daemon=True)
     processing_thread.start()
     
-    # Stream logs and wait for result
+    # Stream logs, progress, and wait for result
     result = None
     buffer = ""
     
     while result is None or processing_thread.is_alive():
+        # Check for progress updates
+        try:
+            while True:
+                progress, step_message = progress_queue.get_nowait()
+                yield f"data: PROGRESS:{json.dumps({'progress': progress, 'step': step_message})}\n\n"
+        except queue.Empty:
+            pass
+        
         # Check for new logs
         try:
             while True:

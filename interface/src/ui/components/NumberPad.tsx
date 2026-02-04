@@ -2,7 +2,8 @@ import React from 'react'
 
 interface NumberPadProps {
   value: string
-  unit: 'cm' | 'in'
+  unit: 'cm' | 'in' | 'lbs'
+  title?: string
   onInput: (value: string) => void
   onClose: () => void
   onConfirm: () => void
@@ -11,6 +12,7 @@ interface NumberPadProps {
 export const NumberPad: React.FC<NumberPadProps> = ({
   value,
   unit,
+  title,
   onInput,
   onClose,
   onConfirm,
@@ -34,8 +36,14 @@ export const NumberPad: React.FC<NumberPadProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50">
-      <div className="bg-white w-full max-w-2xl rounded-t-2xl shadow-2xl">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white w-full max-w-2xl rounded-t-2xl shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <button
@@ -44,7 +52,7 @@ export const NumberPad: React.FC<NumberPadProps> = ({
           >
             Cancel
           </button>
-          <span className="text-xl font-semibold text-dark-blue">Enter Height</span>
+          <span className="text-xl font-semibold text-dark-blue">{title || `Enter ${unit === 'lbs' ? 'Weight' : 'Height'}`}</span>
           <button
             onClick={onConfirm}
             className="text-light-blue hover:opacity-80 font-semibold text-lg px-4 py-2 touch-manipulation"

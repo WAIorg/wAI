@@ -230,13 +230,21 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True):
+def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True, progress_callback=None):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D
     print("Initializing SAM3D estimator...")
+    if progress_callback:
+        progress_callback(0, "Initializing SAM3D model...")
     sam3d_estimator = init_sam3d(paths["sam3d_model_checkpoint"], paths["mhr_model_checkpoint"], device)
+    
+    if progress_callback:
+        progress_callback(20, "Creating 3D body pose...")
     verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, sam3d_estimator, device)
+    
+    if progress_callback:
+        progress_callback(40, "Aligning SAM3D model with depth data...")
     sam_pcd = prealign_best(verts, point_cloud)
 
     if visualize:
@@ -250,6 +258,8 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
     print("SAM3D pose created. Proceeding to ICP alignment...")
 
     # 2) Run ICP registration
+    if progress_callback:
+        progress_callback(60, "Running ICP registration...")
     # if we want to save sam3d pcd (not needed for pipeline)
     # pcd_icp_registration(point_cloud, sam_pcd, save=False)
 
@@ -264,9 +274,15 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
         o3d.visualization.draw_geometries([point_cloud, mesh_aligned])
 
     # 3) Make watertight mesh 
+    if progress_callback:
+        progress_callback(80, "Creating watertight mesh...")
     watertight_mesh = utils.make_watertight_meshfix(mesh_aligned)
     
     if save:
         o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", watertight_mesh)
+    
+    if progress_callback:
+        progress_callback(100, "3D modelling complete")
+    
     return watertight_mesh
 

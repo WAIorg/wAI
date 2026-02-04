@@ -13,6 +13,9 @@ router = APIRouter(prefix="/realsense_capture", tags=["realsense_capture"])
 class CaptureRequest(BaseModel):
     height: Optional[str] = None
     sex: Optional[str] = None
+    weight: Optional[str] = None
+    race_ethnicity: Optional[str] = None
+    activity_level: Optional[str] = None
     process_after_capture: bool = False
 
 
@@ -30,7 +33,13 @@ def capture_image(
     realsense: RealSenseService = Depends(get_realsense_service)
 ):
     """Capture RGB image and depth array from RealSense camera with metadata."""
-    result = realsense.capture_image(height=request.height, sex=request.sex)
+    result = realsense.capture_image(
+        height=request.height,
+        sex=request.sex,
+        weight=request.weight,
+        race_ethnicity=request.race_ethnicity,
+        activity_level=request.activity_level
+    )
     if result is None:
         return ImageResponse(success=False)
     

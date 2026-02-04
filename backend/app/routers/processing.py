@@ -15,6 +15,7 @@ class ProcessingRequest(BaseModel):
     sex: Optional[str] = None
     height: Optional[float] = None
     use_most_recent: bool = True
+    capture_start_time: Optional[float] = None  # Unix timestamp when capture started
 
 
 class ProcessingResponse(BaseModel):
@@ -40,7 +41,8 @@ def run_processing(request: ProcessingRequest):
         depth_path=request.depth_path,
         sex=request.sex,
         height=request.height,
-        use_most_recent=request.use_most_recent
+        use_most_recent=request.use_most_recent,
+        capture_start_time=request.capture_start_time
     )
     
     return ProcessingResponse(**result)
@@ -58,7 +60,8 @@ def run_processing_stream(request: ProcessingRequest):
             depth_path=request.depth_path,
             sex=request.sex,
             height=request.height,
-            use_most_recent=request.use_most_recent
+            use_most_recent=request.use_most_recent,
+            capture_start_time=request.capture_start_time
         ):
             yield log_line
     
