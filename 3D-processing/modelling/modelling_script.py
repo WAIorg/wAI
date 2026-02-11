@@ -54,9 +54,9 @@ def init_sam3d(sam3d_ckpt, mhr_path, device):
 
 def create_pose_sam3d(img, x1, y1, x2, y2,estimator, device, visualize: bool = False): 
     K = np.array([
-        [638.19, 0.0,638.19],
-        [0.0,639.70,246.72323964],
-        [0.0,0.0,356.18],
+        [config["camera"]["fx"], 0.0,config["camera"]["cx"]],
+        [0.0,config["camera"]["fy"],config["camera"]["cy"]],
+        [0.0,0.0,1.0],
     ], dtype=np.float32)
 
     cam_int = torch.tensor(K, dtype=torch.float32, device=device).unsqueeze(0)
