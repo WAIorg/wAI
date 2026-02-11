@@ -52,7 +52,7 @@ def init_sam3d(sam3d_ckpt, mhr_path, device):
     return estimator
 
 
-def create_pose_sam3d(img, x1, y1, x2, y2,config, estimator, device, visualize: bool = False): 
+def create_pose_sam3d(img, x1, y1, x2, y2, person_segmentation_mask, config, estimator, device, visualize: bool = False): 
     K = np.array([
         [config["camera"]["fx"], 0.0,config["camera"]["cx"]],
         [0.0,config["camera"]["fy"],config["camera"]["cy"]],
@@ -63,9 +63,9 @@ def create_pose_sam3d(img, x1, y1, x2, y2,config, estimator, device, visualize: 
     outputs = estimator.process_one_image(
         img,                 
         bboxes=np.array([[x1,y1,x2,y2]], dtype=np.float32),
-        masks=None,
+        masks=person_segmentation_mask,
         cam_int=cam_int,
-        use_mask=False,      
+        use_mask=True,      
         inference_type="body",
     )
     out0 = outputs[0]
@@ -230,7 +230,7 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True, progress_callback=None):
+def main(img_rgb, x1, y1, x2, y2, point_cloud, person_segmentation_mask, visualize: bool = True, save: bool = True, progress_callback=None):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D
@@ -241,7 +241,7 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
     
     if progress_callback:
         progress_callback(20, "Creating 3D body pose...")
-    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, config, sam3d_estimator, device)
+    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, person_segmentation_mask, config, sam3d_estimator, device)
     
     if progress_callback:
         progress_callback(40, "Aligning SAM3D model with depth data...")

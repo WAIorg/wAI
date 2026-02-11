@@ -188,8 +188,8 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
 
 # filter outliers 
 def filter_depth_outliers(depth_map, config):
-    fx_d, fy_d = config["changes"]["fx"], config["changes"]["fy"]
-    cx_d, cy_d = config["changes"]["cx"], config["changes"]["cy"]
+    fx_d, fy_d = config["camera"]["fx"], config["camera"]["fy"]
+    cx_d, cy_d = config["camera"]["cx"], config["camera"]["cy"]
     depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
@@ -235,7 +235,7 @@ def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False, progress_callback=None):
+def run_pipeline(frame_rgb, depth_arr, config, visualize=False, save=False, progress_callback=None):
     print("Starting segmentation pipeline...")
     if progress_callback:
         progress_callback(0, "Starting segmentation pipeline...")
@@ -270,10 +270,11 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False, progress_cal
     if progress_callback:
         progress_callback(50, "Segmentation complete")
 
-    return point_cloud, img_rgb, x1, y1, x2, y2
+    return point_cloud, img_rgb, person_segmentation_mask, x1, y1, x2, y2
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
     frame_rgb=paths["rgb_img_path"]
     depth_arr=paths["depth_img_path"]
-    point_cloud = run_pipeline(frame_rgb, depth_arr, True)
+    paths, config = load_config(CONFIG_PATH)
+    point_cloud = run_pipeline(frame_rgb, depth_arr, config, True)

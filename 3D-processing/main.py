@@ -63,9 +63,10 @@ def main(
     # 1) Segmentation pipeline (0-50%)
     if progress_callback:
         progress_callback(5, "Starting segmentation pipeline...")
-    point_cloud, img_rgb, x1, y1, x2, y2 = segmentation_script.run_pipeline(
+    point_cloud, img_rgb, person_segmentation_mask, x1, y1, x2, y2 = segmentation_script.run_pipeline(
         frame_rgb=rgb_img_path, 
         depth_arr=depth_img_path,
+        config=config,
         visualize=visualize, 
         save=save,
         progress_callback=lambda p, m: progress_callback(5 + p * 0.45, m) if progress_callback else None
@@ -76,7 +77,7 @@ def main(
         progress_callback(50, "Starting 3D modelling pipeline...")
     mesh = modelling_script.main(
         img_rgb=img_rgb, x1=x1, y1=y1, x2=x2, 
-        y2=y2, point_cloud=point_cloud, 
+        y2=y2, point_cloud=point_cloud, person_segmentation_mask=person_segmentation_mask,
         visualize=visualize, save=save,
         progress_callback=lambda p, m: progress_callback(50 + p * 0.35, m) if progress_callback else None
         )
