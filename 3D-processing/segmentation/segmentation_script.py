@@ -43,8 +43,8 @@ def download_sam():
     repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
     possible_locations = [
         repo_root / "sam_vit_l_0b3195.pth",  # Root of 3D-processing
-        repo_root / "checkpoints" / "sam_vit_h.pth",  # checkpoints subfolder
-        repo_root / "segmentation" / "sam_vit_h.pth",  # segmentation folder
+        repo_root / "checkpoints" / "sam_vit_l_0b3195.pth",  # checkpoints subfolder
+        repo_root / "segmentation" / "sam_vit_l_0b3195.pth",  # segmentation folder
         Path("sam_vit_l_0b3195.pth"),  # Current directory (fallback)
     ]
     
@@ -57,7 +57,7 @@ def download_sam():
     
     if sam_checkpoint is None:
         # If not found, try to download to 3D-processing root
-        sam_checkpoint = str(repo_root / "sam_vit_h.pth")
+        sam_checkpoint = str(repo_root / "sam_vit_l_0b3195.pth")
         url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
         if not os.path.exists(sam_checkpoint):
             print("Downloading SAM checkpoint...")
@@ -187,9 +187,9 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
     return depth_map
 
 # filter outliers 
-def filter_depth_outliers(depth_map):
-    fx_d, fy_d = 638.19, 638.19
-    cx_d, cy_d = 639.70, 356.18
+def filter_depth_outliers(depth_map, config):
+    fx_d, fy_d = config["changes"]["fx"], config["changes"]["fy"]
+    cx_d, cy_d = config["changes"]["cx"], config["changes"]["cy"]
     depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
@@ -259,7 +259,7 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False, progress_cal
         progress_callback(30, "Overlaying segmentation with depth data...")
     # 3) Overlay segmentation with depth
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
-    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
+    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask, config)
     
     if progress_callback:
         progress_callback(40, "Creating point cloud from depth data...")
