@@ -38,21 +38,59 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
-    sam_checkpoint = "sam_vit_l_0b3195.pth"
-    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
-    if not os.path.exists(sam_checkpoint):
-        print("Downloading SAM checkpoint...")
-        urllib.request.urlretrieve(url, sam_checkpoint)
-    else:
-        print("SAM checkpoint already exists.")
-    print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
+
+    # Check for existing checkpoint in 3D-processing folder first
+    repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
+    possible_locations = [
+        repo_root / "sam_vit_l_0b3195.pth",  # Root of 3D-processing
+        repo_root / "checkpoints" / "sam_vit_h.pth",  # checkpoints subfolder
+        repo_root / "segmentation" / "sam_vit_h.pth",  # segmentation folder
+        Path("sam_vit_l_0b3195.pth"),  # Current directory (fallback)
+    ]
+    
+    sam_checkpoint = None
+    for location in possible_locations:
+        if location.exists():
+            sam_checkpoint = str(location.resolve())
+            print(f"Found existing SAM checkpoint at: {sam_checkpoint}")
+            break
+    
+    if sam_checkpoint is None:
+        # If not found, try to download to 3D-processing root
+        sam_checkpoint = str(repo_root / "sam_vit_h.pth")
+        url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
+        if not os.path.exists(sam_checkpoint):
+            print("Downloading SAM checkpoint...")
+            urllib.request.urlretrieve(url, sam_checkpoint)
+        else:
+            print("SAM checkpoint already exists.")
+        print(f"SAM checkpoint saved at: {os.path.abspath(sam_checkpoint)}")
     
     return os.path.abspath(sam_checkpoint), device
 
 # YOLO person recognition 
 def person_recognition(frame_rgb, visualize=False):
+    # Check for existing YOLO checkpoint in 3D-processing folder first
+    repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
+    possible_locations = [
+        repo_root / "yolov8n.pt",  # Root of 3D-processing
+        repo_root / "checkpoints" / "yolov8n.pt",  # checkpoints subfolder
+        repo_root / "segmentation" / "yolov8n.pt",  # segmentation folder
+    ]
     
-    model = YOLO("yolov8n.pt")
+    yolo_checkpoint = None
+    for location in possible_locations:
+        if location.exists():
+            yolo_checkpoint = str(location.resolve())
+            print(f"Found existing YOLO checkpoint at: {yolo_checkpoint}")
+            break
+    
+    # YOLO will auto-download if not found, but prefer local checkpoint if available
+    if yolo_checkpoint:
+        model = YOLO(yolo_checkpoint)
+    else:
+        model = YOLO("yolov8n.pt")  # Will auto-download if not found
+    
     print("YOLOv8 model loaded:", type(model))
     frame_rgb = cv2.imread(frame_rgb)
     if frame_rgb is None:
@@ -68,6 +106,7 @@ def person_recognition(frame_rgb, visualize=False):
 
     x1, y1, x2, y2, conf = max(person_boxes, key=lambda b: b[4]) # extract box
     print(f"Person detected with confidence {conf:.2f}")
+    # Note: progress callback is handled in run_pipeline
 
     if visualize:
         # display
@@ -196,23 +235,40 @@ def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False, progress_callback=None):
     print("Starting segmentation pipeline...")
+    if progress_callback:
+        progress_callback(0, "Starting segmentation pipeline...")
     
+    if progress_callback:
+        progress_callback(5, "Loading SAM model...")
     sam_checkpoint, device = download_sam()
+    
     # 1) YOLO person recognition
+    if progress_callback:
+        progress_callback(10, "Detecting person in image...")
     img_rgb, x1, y1, x2, y2 = person_recognition(frame_rgb)
+    
+    if progress_callback:
+        progress_callback(20, "Person detected, creating segmentation mask...")
 
     # 2) SAM person segmentation
     person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
     
+    if progress_callback:
+        progress_callback(30, "Overlaying segmentation with depth data...")
     # 3) Overlay segmentation with depth
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
     filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
     
+    if progress_callback:
+        progress_callback(40, "Creating point cloud from depth data...")
     # 4) Create point cloud
     point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
     print("Finished processing point cloud")
+    
+    if progress_callback:
+        progress_callback(50, "Segmentation complete")
 
     return point_cloud, img_rgb, x1, y1, x2, y2
 
