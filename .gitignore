@@ -18,7 +18,10 @@ data
 3D-processing/sam_vit_l_0b3195.pth
 3D-processing/yolov8n.pt
 
+interface/node_modules
+
 *.ply
 *.obj
 *.DS_Store
+*.pth
 

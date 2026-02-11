@@ -38,13 +38,14 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
+
     # Check for existing checkpoint in 3D-processing folder first
     repo_root = Path(__file__).resolve().parents[1]  # Go up from segmentation/segmentation_script.py to 3D-processing
     possible_locations = [
-        repo_root / "sam_vit_h.pth",  # Root of 3D-processing
+        repo_root / "sam_vit_l_0b3195.pth",  # Root of 3D-processing
         repo_root / "checkpoints" / "sam_vit_h.pth",  # checkpoints subfolder
         repo_root / "segmentation" / "sam_vit_h.pth",  # segmentation folder
-        Path("sam_vit_h.pth"),  # Current directory (fallback)
+        Path("sam_vit_l_0b3195.pth"),  # Current directory (fallback)
     ]
     
     sam_checkpoint = None
@@ -57,7 +58,7 @@ def download_sam():
     if sam_checkpoint is None:
         # If not found, try to download to 3D-processing root
         sam_checkpoint = str(repo_root / "sam_vit_h.pth")
-        url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+        url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth"
         if not os.path.exists(sam_checkpoint):
             print("Downloading SAM checkpoint...")
             urllib.request.urlretrieve(url, sam_checkpoint)
@@ -121,7 +122,7 @@ def person_recognition(frame_rgb, visualize=False):
 
 # segment person from image with SAM
 def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False):
-    sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
+    sam = sam_model_registry["vit_l"](checkpoint=sam_checkpoint).to(device)
 
     predictor = SamPredictor(sam) # SAM predictor
     predictor.set_image(img_rgb) # set image to predict on
