@@ -15,6 +15,7 @@ data
 3D-processing/segmentation/outputs
 3D-processing/segmentation/images
 3D-processing/sam_vit_h.pth
+3D-processing/sam_vit_l_0b3195.pth
 3D-processing/yolov8n.pt
 
 *.ply

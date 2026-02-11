@@ -52,7 +52,7 @@ def init_sam3d(sam3d_ckpt, mhr_path, device):
     return estimator
 
 
-def create_pose_sam3d(img, x1, y1, x2, y2,estimator, device, visualize: bool = False): 
+def create_pose_sam3d(img, x1, y1, x2, y2,config, estimator, device, visualize: bool = False): 
     K = np.array([
         [config["camera"]["fx"], 0.0,config["camera"]["cx"]],
         [0.0,config["camera"]["fy"],config["camera"]["cy"]],
@@ -241,7 +241,7 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
     
     if progress_callback:
         progress_callback(20, "Creating 3D body pose...")
-    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, sam3d_estimator, device)
+    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, config, sam3d_estimator, device)
     
     if progress_callback:
         progress_callback(40, "Aligning SAM3D model with depth data...")
