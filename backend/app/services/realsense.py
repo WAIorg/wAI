@@ -139,14 +139,14 @@ class RealSenseService:
             depth_vp = None
             
             for vp in color_profiles:
-                if vp.width() == 640 and vp.height() == 480 and vp.fps() == 30:
+                if vp.width() == 1280 and vp.height() == 720 and vp.fps() == 6:
                     color_vp = vp
                     break
             if not color_vp:
                 color_vp = color_profiles[0]
             
             for vp in depth_profiles:
-                if vp.width() == 640 and vp.height() == 480 and vp.fps() == 30:
+                if vp.width() == 1280 and vp.height() == 720 and vp.fps() == 6:
                     depth_vp = vp
                     break
             if not depth_vp:
