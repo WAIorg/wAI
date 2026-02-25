@@ -16,6 +16,7 @@ class CaptureRequest(BaseModel):
     weight: Optional[str] = None
     race_ethnicity: Optional[str] = None
     activity_level: Optional[str] = None
+    notes: Optional[str] = None
     process_after_capture: bool = False
 
 
@@ -38,7 +39,8 @@ def capture_image(
         sex=request.sex,
         weight=request.weight,
         race_ethnicity=request.race_ethnicity,
-        activity_level=request.activity_level
+        activity_level=request.activity_level,
+        notes=request.notes,
     )
     if result is None:
         return ImageResponse(success=False)

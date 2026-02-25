@@ -40,16 +40,16 @@ export const ProcessingView: React.FC<ProcessingViewProps> = ({
       <div className="w-full max-w-6xl">
       {/* Processing Status with Progress Bar */}
       {isProcessing && (
-        <div className="bg-blue-50 border border-light-blue rounded-lg p-6 mb-6">
+        <div className="bg-blue-50 border border-light-blue rounded-2xl p-8 mb-8 shadow-lg">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-dark-blue font-semibold text-xl">Processing 3D model...</span>
-              <span className="text-dark-blue font-medium text-sm">{Math.round(progress)}%</span>
+              <span className="text-dark-blue font-semibold text-3xl">Processing 3D model...</span>
+              <span className="text-dark-blue font-bold text-2xl">{Math.round(progress)}%</span>
             </div>
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-200 rounded-full h-5 overflow-hidden">
               <div 
-                className="bg-light-blue h-3 rounded-full transition-all duration-300 ease-out"
+                className="bg-light-blue h-5 rounded-full transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -57,45 +57,45 @@ export const ProcessingView: React.FC<ProcessingViewProps> = ({
           {/* Current Step Message */}
           {currentStep && (
             <div className="mt-3">
-              <p className="text-center text-dark-blue font-medium">{currentStep}</p>
+              <p className="text-center text-dark-blue font-semibold text-2xl">{currentStep}</p>
             </div>
           )}
           {!currentStep && (
-            <p className="text-center text-dark-blue mt-2 opacity-70">This may take a few minutes</p>
+            <p className="text-center text-dark-blue mt-4 opacity-70 text-xl">This may take a few minutes</p>
           )}
         </div>
       )}
 
       {/* Results Display - Only show if still processing (for logs view) */}
       {result && result.success && isProcessing && (
-        <div className="bg-green-50 border border-green-400 rounded-lg p-6 mb-4">
-          <h3 className="text-xl font-bold text-green-800 mb-4">Processing Complete!</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-green-50 border border-green-400 rounded-2xl p-8 mb-6 shadow-md">
+          <h3 className="text-3xl font-bold text-green-800 mb-6 text-center">Processing Complete!</h3>
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <p className="text-sm text-dark-blue">Estimated Weight</p>
-              <p className="text-3xl font-bold text-green-700">
+              <p className="text-lg text-dark-blue mb-1">Estimated Weight</p>
+              <p className="text-4xl font-bold text-green-700">
                 {result.weight?.toFixed(2)} kg
               </p>
-              <p className="text-lg text-dark-blue opacity-70">
+              <p className="text-xl text-dark-blue opacity-70">
                 ({(result.weight! * 2.20462).toFixed(2)} lbs)
               </p>
             </div>
             <div>
-              <p className="text-sm text-dark-blue">Volume</p>
-              <p className="text-2xl font-bold text-green-700">
+              <p className="text-lg text-dark-blue mb-1">Volume</p>
+              <p className="text-3xl font-bold text-green-700">
                 {result.volume?.toFixed(2)} cm³
               </p>
             </div>
             {result.sex && (
               <div>
-                <p className="text-sm text-dark-blue">Sex</p>
-                <p className="text-lg font-semibold text-dark-blue capitalize">{result.sex}</p>
+                <p className="text-lg text-dark-blue">Sex</p>
+                <p className="text-xl font-semibold text-dark-blue capitalize">{result.sex}</p>
               </div>
             )}
             {result.height && (
               <div>
-                <p className="text-sm text-dark-blue">Height</p>
-                <p className="text-lg font-semibold text-dark-blue">{result.height} cm</p>
+                <p className="text-lg text-dark-blue">Height</p>
+                <p className="text-xl font-semibold text-dark-blue">{result.height} cm</p>
               </div>
             )}
           </div>
@@ -111,8 +111,8 @@ export const ProcessingView: React.FC<ProcessingViewProps> = ({
 
       {/* Logs Display - only when developer mode is on */}
       {showLogs && logs.length > 0 && (
-        <div className="bg-gray-900 rounded-lg p-6 mb-6 max-h-[500px] overflow-y-auto shadow-lg">
-          <div className="text-green-400 font-mono text-sm space-y-1">
+        <div className="bg-gray-900 rounded-2xl p-6 mb-8 max-h-[500px] overflow-y-auto shadow-lg">
+          <div className="text-green-400 font-mono text-base space-y-1">
             {logs.map((log, index) => (
               <div key={index} className="whitespace-pre-wrap">
                 {log}
@@ -128,7 +128,7 @@ export const ProcessingView: React.FC<ProcessingViewProps> = ({
         <div className="flex justify-center mt-6">
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-dark-blue text-white rounded-lg hover:bg-opacity-90 transition-colors font-semibold"
+            className="px-10 py-5 bg-dark-blue text-white rounded-2xl hover:bg-opacity-90 transition-colors font-semibold text-2xl shadow-lg"
           >
             Back to Imaging
           </button>

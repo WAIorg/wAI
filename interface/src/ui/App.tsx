@@ -28,6 +28,7 @@ export const App: React.FC = () => {
   const [weight, setWeight] = useState('')
   const [raceEthnicity, setRaceEthnicity] = useState('')
   const [activityLevel, setActivityLevel] = useState('')
+  const [notes, setNotes] = useState('')
   
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false)
@@ -86,19 +87,31 @@ export const App: React.FC = () => {
           weight: weight || null,
           race_ethnicity: raceEthnicity || null,
           activity_level: activityLevel || null,
+          notes: notes || null,
         }),
       })
       const json = await res.json()
       if (json.success) {
-        setLastCapture({
-          rgb_path: json.rgb_path,
-          depth_path: json.depth_path,
-          timestamp: json.timestamp,
-        })
         console.log('Image captured:', json)
-        
-        // Automatically start processing after capture, passing capture start time
-        startProcessing(captureStartTime)
+        if (isDataCollectionMode) {
+          // Data collection mode: save only, no processing. Return to first screen and clear values.
+          setWeight('')
+          setRaceEthnicity('')
+          setActivityLevel('')
+          setNotes('')
+          setLastCapture(null)
+          setSex('')
+          setHeight('')
+          setShowDataCollection(true)
+        } else {
+          setLastCapture({
+            rgb_path: json.rgb_path,
+            depth_path: json.depth_path,
+            timestamp: json.timestamp,
+          })
+          // Automatically start processing after capture, passing capture start time
+          startProcessing(captureStartTime)
+        }
       } else {
         console.error('Capture failed')
         alert('Failed to capture image. Make sure the RealSense camera is connected.')
@@ -214,9 +227,11 @@ export const App: React.FC = () => {
         weight={weight}
         raceEthnicity={raceEthnicity}
         activityLevel={activityLevel}
+        notes={notes}
         onWeightChange={setWeight}
         onRaceEthnicityChange={setRaceEthnicity}
         onActivityLevelChange={setActivityLevel}
+        onNotesChange={setNotes}
         onContinue={() => setShowDataCollection(false)}
       />
     )

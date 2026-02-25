@@ -1,13 +1,16 @@
 import React, { useState } from 'react'
 import { NumberPad } from './NumberPad'
+import { TextKeyboard } from './TextKeyboard'
 
 interface DataCollectionViewProps {
   weight: string
   raceEthnicity: string
   activityLevel: string
+  notes: string
   onWeightChange: (weight: string) => void
   onRaceEthnicityChange: (race: string) => void
   onActivityLevelChange: (level: string) => void
+  onNotesChange: (notes: string) => void
   onContinue: () => void
 }
 
@@ -33,13 +36,17 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
   weight,
   raceEthnicity,
   activityLevel,
+  notes,
   onWeightChange,
   onRaceEthnicityChange,
   onActivityLevelChange,
+  onNotesChange,
   onContinue,
 }) => {
   const [showNumberPad, setShowNumberPad] = useState(false)
   const [tempWeight, setTempWeight] = useState(weight)
+  const [showTextKeyboard, setShowTextKeyboard] = useState(false)
+  const [tempNotes, setTempNotes] = useState(notes)
   const [errors, setErrors] = useState<{ weight?: boolean; race?: boolean; activity?: boolean }>({})
 
   const handleContinue = () => {
@@ -73,10 +80,10 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
           Data Collection
         </h1>
 
-        <div className="space-y-10">
+        <div className="space-y-12">
           {/* Weight Input */}
           <div>
-            <label className="block text-white mb-5 text-2xl font-semibold">
+            <label className="block text-white mb-6 text-3xl font-semibold">
               Weight <span className="text-red-300 ml-3">required</span>
             </label>
             <div className="flex gap-4">
@@ -90,22 +97,22 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
                   setShowNumberPad(true)
                 }}
                 placeholder="Tap to enter"
-                className={`flex-1 px-6 py-5 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-light-blue focus:border-transparent cursor-pointer text-2xl touch-manipulation bg-white text-dark-blue ${
+                className={`flex-1 px-7 py-7 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent cursor-pointer text-3xl touch-manipulation bg-white text-dark-blue ${
                   errors.weight ? 'border-red-400' : 'border-gray-300'
                 }`}
               />
-              <div className="px-6 py-5 bg-white border-2 border-gray-300 rounded-lg text-2xl text-dark-blue font-semibold flex items-center">
+              <div className="px-7 py-7 bg-white border-2 border-gray-300 rounded-xl text-3xl text-dark-blue font-semibold flex items-center">
                 lbs
               </div>
             </div>
             {errors.weight && (
-              <p className="text-red-300 text-base font-medium mt-2">Please enter weight</p>
+              <p className="text-red-300 text-lg font-medium mt-3">Please enter weight</p>
             )}
           </div>
 
           {/* Race/Ethnicity Input */}
           <div>
-            <label className="block text-white mb-5 text-2xl font-semibold">
+            <label className="block text-white mb-6 text-3xl font-semibold">
               Race/Ethnicity <span className="text-red-300 ml-3">required</span>
             </label>
             <select
@@ -116,25 +123,29 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
                   setErrors({ ...errors, race: false })
                 }
               }}
-              className={`w-full px-6 py-5 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-light-blue focus:border-transparent bg-white text-2xl touch-manipulation text-dark-blue ${
+              className={`w-full px-7 py-7 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent bg-white text-3xl touch-manipulation text-dark-blue ${
                 errors.race ? 'border-red-400' : 'border-gray-300'
               }`}
             >
               <option value="">Select race/ethnicity</option>
               {RACE_ETHNICITY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
+                <option
+                  key={option}
+                  value={option}
+                  style={{ fontSize: '1.75rem', padding: '0.75rem 0.5rem' }}
+                >
                   {option}
                 </option>
               ))}
             </select>
             {errors.race && (
-              <p className="text-red-300 text-base font-medium mt-2">Please select race/ethnicity</p>
+              <p className="text-red-300 text-lg font-medium mt-3">Please select race/ethnicity</p>
             )}
           </div>
 
           {/* Activity Level Input */}
           <div>
-            <label className="block text-white mb-5 text-2xl font-semibold">
+            <label className="block text-white mb-6 text-3xl font-semibold">
               Activity Level <span className="text-red-300 ml-3">required</span>
             </label>
             <select
@@ -145,33 +156,62 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
                   setErrors({ ...errors, activity: false })
                 }
               }}
-              className={`w-full px-6 py-5 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-light-blue focus:border-transparent bg-white text-2xl touch-manipulation text-dark-blue ${
+              className={`w-full px-7 py-7 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent bg-white text-3xl touch-manipulation text-dark-blue ${
                 errors.activity ? 'border-red-400' : 'border-gray-300'
               }`}
             >
               <option value="">Select activity level</option>
               {ACTIVITY_LEVEL_OPTIONS.map((option) => (
-                <option key={option} value={option}>
+                <option
+                  key={option}
+                  value={option}
+                  style={{ fontSize: '1.75rem', padding: '0.75rem 0.5rem' }}
+                >
                   {option}
                 </option>
               ))}
             </select>
             {errors.activity && (
-              <p className="text-red-300 text-base font-medium mt-2">Please select activity level</p>
+              <p className="text-red-300 text-lg font-medium mt-3">Please select activity level</p>
             )}
+          </div>
+
+          {/* Notes Input (optional) */}
+          <div>
+            <label className="block text-white mb-6 text-3xl font-semibold">
+              Notes <span className="text-gray-300 ml-3 text-2xl font-normal">(optional)</span>
+            </label>
+            <div className="flex gap-4 items-start">
+              <textarea
+                value={notes}
+                onChange={(e) => onNotesChange(e.target.value)}
+                placeholder="Type notes here or use the on-screen keyboard"
+                className="flex-1 px-7 py-7 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent bg-white text-3xl touch-manipulation text-dark-blue min-h-[180px] resize-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setTempNotes(notes)
+                  setShowTextKeyboard(true)
+                }}
+                className="px-5 py-4 bg-white border-2 border-light-blue rounded-xl text-xl font-semibold text-light-blue hover:bg-light-blue hover:text-white transition-colors touch-manipulation leading-tight"
+              >
+                On-screen<br />keyboard
+              </button>
+            </div>
           </div>
 
           {/* Continue Button */}
           <div className="mt-8">
             <button
               onClick={handleContinue}
-              className="w-full px-6 py-5 rounded-xl transition-colors flex items-center justify-center gap-3 shadow-lg touch-manipulation bg-light-blue hover:bg-accent-blue text-white"
+              className="w-full px-8 py-7 rounded-2xl transition-colors flex items-center justify-center gap-4 shadow-2xl touch-manipulation bg-light-blue hover:bg-accent-blue text-white"
               aria-label="Continue to imaging"
             >
-              <span className="text-3xl font-bold">Continue</span>
+              <span className="text-4xl font-bold">Continue</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
+                className="h-10 w-10"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -205,6 +245,23 @@ export const DataCollectionView: React.FC<DataCollectionViewProps> = ({
             if (errors.weight) {
               setErrors({ ...errors, weight: false })
             }
+          }}
+        />
+      )}
+
+      {/* Text Keyboard Modal for Notes */}
+      {showTextKeyboard && (
+        <TextKeyboard
+          value={tempNotes}
+          title="Enter Notes"
+          onInput={setTempNotes}
+          onClose={() => {
+            setShowTextKeyboard(false)
+            setTempNotes(notes)
+          }}
+          onConfirm={() => {
+            onNotesChange(tempNotes)
+            setShowTextKeyboard(false)
           }}
         />
       )}

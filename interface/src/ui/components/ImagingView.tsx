@@ -49,7 +49,7 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
   }, [sex])
   return (
     <div className="w-full max-w-6xl">
-      <div className="flex gap-20 items-start justify-center w-full max-w-7xl">
+      <div className="flex gap-24 items-start justify-center w-full max-w-7xl">
         {/* Image Display Area with Overlays */}
         <div className="relative flex-shrink-0">
           {/* Instruction Text for Image */}
@@ -102,16 +102,16 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
         {/* Data Input Section */}
         <div className="flex flex-col gap-10 flex-1 max-w-md overflow-visible">
           {/* Instruction Text for Inputs */}
-          <p className="text-dark-blue text-3xl font-bold mb-2">
+          <p className="text-dark-blue text-4xl font-bold mb-4">
             Input sex and height values
           </p>
           
           {/* Sex Input */}
           <div>
-            <label className="block text-dark-blue mb-5 text-2xl font-semibold">
+            <label className="block text-dark-blue mb-6 text-3xl font-semibold">
               Sex <span className="text-red-500 ml-3">required</span>
             </label>
-            <div className="flex gap-12">
+            <div className="flex gap-16">
               <label className="flex items-center gap-5 cursor-pointer touch-manipulation">
                 <div className="relative">
                   <input
@@ -124,11 +124,11 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                         onSexChange('')
                       }
                     }}
-                    className="w-8 h-8 border-2 border-gray-300 rounded-lg focus:ring-light-blue appearance-none checked:bg-light-blue checked:border-light-blue"
+                    className="w-10 h-10 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-light-blue appearance-none checked:bg-light-blue checked:border-light-blue"
                   />
                   {sex === 'female' && (
                     <svg
-                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none"
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-white pointer-events-none"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -138,7 +138,7 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                     </svg>
                   )}
                 </div>
-                <span className="text-dark-blue text-2xl font-medium">Female</span>
+                <span className="text-dark-blue text-3xl font-medium">Female</span>
               </label>
               <label className="flex items-center gap-5 cursor-pointer touch-manipulation">
                 <div className="relative">
@@ -152,11 +152,11 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                         onSexChange('')
                       }
                     }}
-                    className="w-8 h-8 border-2 border-gray-300 rounded-lg focus:ring-light-blue appearance-none checked:bg-light-blue checked:border-light-blue"
+                    className="w-10 h-10 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-light-blue appearance-none checked:bg-light-blue checked:border-light-blue"
                   />
                   {sex === 'male' && (
                     <svg
-                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none"
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-white pointer-events-none"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -166,15 +166,15 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                     </svg>
                   )}
                 </div>
-                <span className="text-dark-blue text-2xl font-medium">Male</span>
+                <span className="text-dark-blue text-3xl font-medium">Male</span>
               </label>
             </div>
           </div>
 
           {/* Height Input */}
           <div>
-            <label className="block text-dark-blue mb-5 text-2xl font-semibold">Height</label>
-            <div className="flex gap-4">
+            <label className="block text-dark-blue mb-6 text-3xl font-semibold">Height</label>
+            <div className="flex gap-5">
               <input
                 type="text"
                 inputMode="none"
@@ -185,13 +185,13 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                   setShowNumberPad(true)
                 }}
                 placeholder="Tap to enter"
-                className="flex-1 px-6 py-5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-light-blue focus:border-transparent cursor-pointer text-2xl touch-manipulation"
+                className="flex-1 px-7 py-7 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent cursor-pointer text-3xl touch-manipulation"
               />
               <select
                 value={heightUnit}
                 onChange={(e) => onHeightUnitChange(e.target.value as 'cm' | 'in')}
-                className="px-6 py-5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-light-blue focus:border-transparent bg-white text-2xl touch-manipulation w-[120px]"
-                style={{ minWidth: '120px' }}
+                className="px-7 py-7 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent bg-white text-3xl touch-manipulation w-[150px]"
+                style={{ minWidth: '150px' }}
               >
                 <option value="cm">cm</option>
                 <option value="in">in</option>
@@ -200,11 +200,11 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
           </div>
 
           {/* Capture Button */}
-          <div className="mt-4">
+          <div className="mt-6">
             <button
               onClick={handleCaptureClick}
               disabled={busy || !sex}
-              className={`w-full px-6 py-5 rounded-xl transition-colors flex items-center justify-center gap-3 shadow-lg touch-manipulation ${
+              className={`w-full px-8 py-7 rounded-2xl transition-colors flex items-center justify-center gap-4 shadow-2xl touch-manipulation ${
                 busy || !sex
                   ? 'bg-gray-400 cursor-not-allowed text-white'
                   : 'bg-light-blue hover:bg-dark-blue text-white'
@@ -213,7 +213,7 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
+                className="h-10 w-10"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -230,18 +230,18 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
                   d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span className="text-3xl font-bold">Capture Image</span>
+              <span className="text-4xl font-bold">Capture Image</span>
             </button>
             {showSexError && !sex && (
-              <p className="text-base text-red-500 font-medium mt-3 text-center">Please select a sex</p>
+              <p className="text-lg text-red-500 font-semibold mt-4 text-center">Please select a sex</p>
             )}
             {lastCapture && (
-              <div className="text-base text-dark-blue text-center mt-3">
-                <p className="font-semibold text-green-600">✓ Captured successfully!</p>
-                <p className="text-sm mt-1">
+              <div className="text-lg text-dark-blue text-center mt-4">
+                <p className="font-semibold text-green-600 text-xl">✓ Captured successfully!</p>
+                <p className="text-base mt-2">
                   RGB: {lastCapture.rgb_path?.split(/[/\\]/).pop()}
                 </p>
-                <p className="text-sm">
+                <p className="text-base">
                   Depth: {lastCapture.depth_path?.split(/[/\\]/).pop()}
                 </p>
               </div>

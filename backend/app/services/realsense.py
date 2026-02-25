@@ -27,7 +27,19 @@ class RealSenseService:
         os.makedirs(self.depth_dir, exist_ok=True)
         
         # Initialize CSV file with headers if it doesn't exist or has old headers
-        expected_headers = ['rgb_path', 'depth_path', 'weight', 'race_ethnicity', 'activity_level', 'height', 'sex', 'processing_time_seconds', 'volume_cm3', 'estimated_weight_kg']
+        expected_headers = [
+            'rgb_path',
+            'depth_path',
+            'weight',
+            'race_ethnicity',
+            'activity_level',
+            'notes',
+            'height',
+            'sex',
+            'processing_time_seconds',
+            'volume_cm3',
+            'estimated_weight_kg',
+        ]
         needs_header_update = False
         
         if not os.path.exists(self.csv_path):
@@ -67,13 +79,26 @@ class RealSenseService:
                     # Migrate old rows: add empty values for new columns
                     for row in existing_rows:
                         # Old format: [rgb_path, depth_path, height, sex]
-                        # New format: [rgb_path, depth_path, weight, race_ethnicity, activity_level, height, sex, processing_time_seconds, volume_cm3, estimated_weight_kg]
+                        # New format: [rgb_path, depth_path, weight, race_ethnicity, activity_level, notes, height, sex, processing_time_seconds, volume_cm3, estimated_weight_kg]
                         if len(row) == 4:
                             # Old format - insert empty values for new columns
-                            writer.writerow([row[0], row[1], '', '', '', row[2], row[3], '', '', ''])
+                            writer.writerow([row[0], row[1], '', '', '', '', row[2], row[3], '', '', ''])
                         elif len(row) == 7:
-                            # Format without processing columns - add empty processing columns
-                            writer.writerow(row + ['', '', ''])
+                            # Format without notes/processing columns - expand to new format
+                            # Old 7-col format assumed: [rgb_path, depth_path, weight, race_ethnicity, activity_level, height, sex]
+                            writer.writerow([
+                                row[0],
+                                row[1],
+                                row[2],  # weight
+                                row[3],  # race_ethnicity
+                                row[4],  # activity_level
+                                '',      # notes
+                                row[5],  # height
+                                row[6],  # sex
+                                '',      # processing_time_seconds
+                                '',      # volume_cm3
+                                '',      # estimated_weight_kg
+                            ])
                         elif len(row) == len(expected_headers):
                             # Already in new format
                             writer.writerow(row)
@@ -343,7 +368,8 @@ class RealSenseService:
         sex: Optional[str] = None,
         weight: Optional[str] = None,
         race_ethnicity: Optional[str] = None,
-        activity_level: Optional[str] = None
+        activity_level: Optional[str] = None,
+        notes: Optional[str] = None
     ) -> Optional[dict]:
         """
         Capture current RGB image and depth array.
@@ -375,6 +401,7 @@ class RealSenseService:
                     weight or '',
                     race_ethnicity or '',
                     activity_level or '',
+                    notes or '',
                     height or '',
                     sex or '',
                     '',  # processing_time_seconds (will be filled after processing)
@@ -422,11 +449,11 @@ class RealSenseService:
                         while len(row) < len(rows[0]):
                             row.append('')
                         
-                        # Update processing columns (indices 7, 8, 9)
-                        if len(row) >= 10:
-                            row[7] = f"{processing_time_seconds:.2f}"
-                            row[8] = f"{volume_cm3:.2f}"
-                            row[9] = f"{estimated_weight_kg:.2f}"
+                        # Update processing columns (indices 8, 9, 10)
+                        if len(row) >= 11:
+                            row[8] = f"{processing_time_seconds:.2f}"
+                            row[9] = f"{volume_cm3:.2f}"
+                            row[10] = f"{estimated_weight_kg:.2f}"
                         updated = True
                         break
             

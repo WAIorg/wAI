@@ -131,15 +131,15 @@ def update_csv_with_processing_results(
                     # Ensure row has enough columns
                     while len(row) < len(rows[0]):
                         row.append('')
-                    
-                    # Update processing columns (indices 7, 8, 9)
-                    if len(row) >= 10:
+
+                    # Update processing columns (indices 8, 9, 10) to match RealSenseService
+                    if len(row) >= 11:
                         if processing_time_seconds is not None:
-                            row[7] = f"{processing_time_seconds:.2f}"
+                            row[8] = f"{processing_time_seconds:.2f}"
                         if volume_cm3 is not None:
-                            row[8] = f"{volume_cm3:.2f}"
+                            row[9] = f"{volume_cm3:.2f}"
                         if estimated_weight_kg is not None:
-                            row[9] = f"{estimated_weight_kg:.2f}"
+                            row[10] = f"{estimated_weight_kg:.2f}"
                     updated = True
                     break
         
