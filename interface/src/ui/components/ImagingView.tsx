@@ -6,6 +6,8 @@ interface ImagingViewProps {
   height: string
   heightUnit: 'cm' | 'in'
   streamUrl: string
+  showStream: boolean
+  onTurnStreamOn: () => void
   onSexChange: (sex: 'female' | 'male' | '') => void
   onHeightChange: (height: string) => void
   onHeightUnitChange: (unit: 'cm' | 'in') => void
@@ -19,6 +21,8 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
   height,
   heightUnit,
   streamUrl,
+  showStream,
+  onTurnStreamOn,
   onSexChange,
   onHeightChange,
   onHeightUnitChange,
@@ -57,13 +61,27 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
             Please centre the user in the outline
           </p>
           <div className="relative w-[640px] h-[480px] bg-gray-100 rounded-lg overflow-hidden border-2 border-light-blue">
-            {/* RealSense Video Stream */}
-            <img
-              src={streamUrl}
-              alt="RealSense RGB Stream"
-              className="w-full h-full object-cover"
-              style={{ imageRendering: 'auto' }}
-            />
+            {/* RealSense Video Stream or Turn stream on button */}
+            {showStream ? (
+              <img
+                src={streamUrl}
+                alt="RealSense RGB Stream"
+                className="w-full h-full object-cover"
+                style={{ imageRendering: 'auto' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={onTurnStreamOn}
+                className="w-full h-full flex flex-col items-center justify-center gap-4 text-dark-blue hover:bg-gray-200 transition-colors"
+                aria-label="Turn stream on"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-light-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                <span className="text-2xl font-bold">Turn stream on</span>
+              </button>
+            )}
 
             {/* Corner Brackets Overlay */}
             <div className="absolute inset-0 pointer-events-none">
@@ -89,13 +107,15 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
               </div>
             </div>
 
-            {/* Crosshair Overlay */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <div className="w-8 h-8 relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-light-blue transform -translate-y-1/2"></div>
-                <div className="absolute left-1/2 top-0 w-0.5 h-full bg-light-blue transform -translate-x-1/2"></div>
+            {/* Crosshair Overlay - only when stream is visible */}
+            {showStream && (
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="w-8 h-8 relative">
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-light-blue transform -translate-y-1/2"></div>
+                  <div className="absolute left-1/2 top-0 w-0.5 h-full bg-light-blue transform -translate-x-1/2"></div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Slightly increase base font size for better readability on larger / hard screens */
+html {
+  font-size: 18px;
+}
+
 body {
   margin: 0;
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -14,6 +19,16 @@ body {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Make interactive controls that are used on touch screens larger and easier to tap.
+   The app consistently adds the `touch-manipulation` class to these elements, so we
+   can safely scale them up here without affecting all controls globally. */
+button.touch-manipulation,
+input.touch-manipulation,
+select.touch-manipulation,
+textarea.touch-manipulation {
+  font-size: 2.1rem;
 }
 
 /* Re-enable text selection for input fields */

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 interface WeightOutputViewProps {
   weight: number
   onTakeAnotherPhoto: () => void
+  audioCueEnabled?: boolean
 }
 
 function playAlertLouder() {
@@ -20,12 +21,13 @@ function playAlertLouder() {
 export const WeightOutputView: React.FC<WeightOutputViewProps> = ({
   weight,
   onTakeAnotherPhoto,
+  audioCueEnabled = true,
 }) => {
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg')
 
-  // Play notification when weight result is shown
+  // Play notification when weight result is shown (only if audio cue is enabled)
   useEffect(() => {
-    if (weight && weight > 0) {
+    if (audioCueEnabled && weight && weight > 0) {
       playAlertLouder()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- play once when view is shown

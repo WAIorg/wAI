@@ -44,17 +44,33 @@ export const App: React.FC = () => {
     error?: string
   } | null>(null)
 
-  // Settings: persist developer mode in localStorage (defaults to off)
+  // Settings: persist in localStorage
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [developerMode, setDeveloperMode] = useState(() => {
     try {
       const stored = localStorage.getItem('wai_developer_mode')
-      // Only return true if explicitly set to 'true', otherwise default to false
       return stored === 'true'
     } catch {
       return false
     }
   })
+  const [audioCueEnabled, setAudioCueEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem('wai_audio_cue')
+      return stored !== 'false' // default on
+    } catch {
+      return true
+    }
+  })
+  const [streamAutoOn, setStreamAutoOn] = useState(() => {
+    try {
+      const stored = localStorage.getItem('wai_stream_auto')
+      return stored !== 'false' // default on = show stream automatically
+    } catch {
+      return true
+    }
+  })
+  const [streamOnManual, setStreamOnManual] = useState(false)
   useEffect(() => {
     try {
       localStorage.setItem('wai_developer_mode', String(developerMode))
@@ -62,8 +78,23 @@ export const App: React.FC = () => {
       // ignore
     }
   }, [developerMode])
+  useEffect(() => {
+    try {
+      localStorage.setItem('wai_audio_cue', String(audioCueEnabled))
+    } catch {
+      // ignore
+    }
+  }, [audioCueEnabled])
+  useEffect(() => {
+    try {
+      localStorage.setItem('wai_stream_auto', String(streamAutoOn))
+    } catch {
+      // ignore
+    }
+  }, [streamAutoOn])
 
   const streamUrl = useMemo(() => `${API_BASE}/realsense_stream/rgb`, [])
+  const showStream = streamAutoOn || streamOnManual
 
   const handleCapture = async () => {
     if (busy) return
@@ -257,6 +288,10 @@ export const App: React.FC = () => {
         onClose={() => setSettingsOpen(false)}
         developerMode={developerMode}
         onDeveloperModeChange={setDeveloperMode}
+        audioCueEnabled={audioCueEnabled}
+        onAudioCueChange={setAudioCueEnabled}
+        streamAutoOn={streamAutoOn}
+        onStreamAutoChange={setStreamAutoOn}
       />
       {isProcessing ? (
         // Processing view (with logs when developer mode is on)
@@ -274,6 +309,7 @@ export const App: React.FC = () => {
         <WeightOutputView
           weight={processingResult.weight || 0}
           onTakeAnotherPhoto={handleTakeAnotherPhoto}
+          audioCueEnabled={audioCueEnabled}
         />
       ) : (
         // Normal imaging view
@@ -283,6 +319,8 @@ export const App: React.FC = () => {
             height={height}
             heightUnit={heightUnit}
             streamUrl={streamUrl}
+            showStream={showStream}
+            onTurnStreamOn={() => setStreamOnManual(true)}
             onSexChange={setSex}
             onHeightChange={setHeight}
             onHeightUnitChange={setHeightUnit}
