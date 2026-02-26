@@ -13,7 +13,7 @@ import yaml
 import trimesh
 import pymeshfix
 import os   
-CONFIG_PATH = "/Users/adeleyounis/Desktop/Capstone/wAI/config.yaml"
+CONFIG_PATH = "/Users/mackenziesnyder/Desktop/Capstone/wAI/config.yaml"
 
 def load_config(config_path: str):
     """Load and parse YAML configuration."""
@@ -34,7 +34,7 @@ def load_config(config_path: str):
 def main(visualize: bool = True, save: bool = True):
     paths, config = load_config(CONFIG_PATH)
     # 1) Segmentation pipeline
-    point_cloud, img_rgb, x1, y1, x2, y2 = segmentation_script.run_pipeline(
+    point_cloud, img_rgb, x1, y1, x2, y2, person_segmentation_mask = segmentation_script.run_pipeline(
         frame_rgb=paths["rgb_img_path"], 
         depth_arr=paths["depth_img_path"],
         visualize=visualize, 
@@ -44,6 +44,7 @@ def main(visualize: bool = True, save: bool = True):
     mesh = modelling_script.main(
         img_rgb=img_rgb, x1=x1, y1=y1, x2=x2, 
         y2=y2, point_cloud=point_cloud, 
+        person_segmentation_mask=person_segmentation_mask,
         visualize=visualize, save=save
         )
 

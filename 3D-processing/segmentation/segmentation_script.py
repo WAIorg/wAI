@@ -149,7 +149,8 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
 # filter outliers 
 def filter_depth_outliers(depth_map):
     fx_d, fy_d = 638.19, 638.19
-    cx_d, cy_d = 639.70, 356.18
+    cx_d, cy_d = 356.18, 246.72323964
+
     depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
@@ -212,7 +213,7 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
     point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
     print("Finished processing point cloud")
 
-    return point_cloud, img_rgb, x1, y1, x2, y2
+    return point_cloud, img_rgb, x1, y1, x2, y2, person_segmentation_mask
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
