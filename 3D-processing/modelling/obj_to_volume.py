@@ -3,7 +3,7 @@ import open3d as o3d
 import numpy as np
 import os
 import yaml
-from  modelling import utils
+from modelling import utils
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # adjust depth if needed
 CONFIG_PATH = REPO_ROOT / "config.yaml"
@@ -54,10 +54,8 @@ def main(mesh=None, mesh_path=None):
 
     # analytic (flux) volume
     analytic_vol = mesh_volume(mesh)
-
-    print(f"Closed Mesh Volume: {analytic_vol:.3f} m³  ({(analytic_vol*1000):.3f} L)")
-    return analytic_vol*1000  # return in liters
+    return analytic_vol*1000 # return in liters
 
 if __name__ == "__main__":
     paths = load_config(CONFIG_PATH)
-    main(mesh_path='/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/output/adele_down/adele_down.obj')
+    main(mesh_path='/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/sam3d_mesh_aligned.ply')

@@ -1,7 +1,7 @@
 # config.yaml
 paths:
-  rgb_img_path: "/Users/adeleyounis/Desktop/Capstone/data/adele.png"
-  depth_img_path: "/Users/adeleyounis/Desktop/Capstone/data/depth_adele.npy"
+  rgb_img_path: "/Users/adeleyounis/Desktop/Capstone/data/realsense_data/01_20_2026/input/alexis_rgb.png"
+  depth_img_path: "/Users/adeleyounis/Desktop/Capstone/data/realsense_data/01_20_2026/input/alexis_depth.npy"
   pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/point_cloud.ply"
   sam_pt_cloud_ply_path: "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/sam_point_cloud.ply"
   sam3d_model_checkpoint: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d/checkpoints/sam-3d-body-dinov3/model.ckpt'
@@ -16,33 +16,12 @@ paths:
   pose_output_dir: 'output/'
   pose_estimator_nn_path: "posture-estimator/human-pose-estimation-opencv/graph_opt.pb"
  
-downsampling:
-  voxel_size: 0.005
-  normal_radius: 0.05
-  normal_max_nn: 30
-
-inflation:
-  inflate_amount: 5.0
-
-cleaning:
-  nb_neighbors: 20
-  std_ratio: 2.0
-  smooth_voxel_size: 0.001
-
-mesh:
-  alpha: 0.1
-  merge_threshold: 0.002
-  mirror_offset: [0, 0, -0.1]
-
-voxelization:
-  voxel_size: 0.01  # in meters
-
 camera:
-fx: 596.25827383
-fy: 593.35350108
-cx: 328.00224565
-cy: 246.72323964
+  fx: 615.70
+  fy: 615.71
+  cx: 330.00
+  cy: 239.04
 
 inputs:
   sex: "Female" # "Female" or "Male"
-  height: 155 # in cm, optional
+  height: 165 # in cm, optional

@@ -37,8 +37,8 @@ def load_config(config_path: str):
 
 # download SAM
 def download_sam():
-    sam_checkpoint = "sam_vit_h.pth"
-    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
+    sam_checkpoint = "sam_vit_b.pth"
+    url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth"
     if not os.path.exists(sam_checkpoint):
         print("Downloading SAM checkpoint...")
         subprocess.run(["wget", "-O", sam_checkpoint, url], check=True)
@@ -82,7 +82,7 @@ def person_recognition(frame_rgb, visualize=False):
 
 # segment person from image with SAM
 def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False):
-    sam = sam_model_registry["vit_h"](checkpoint=sam_checkpoint).to(device)
+    sam = sam_model_registry["vit_b"](checkpoint=sam_checkpoint).to(device)
 
     predictor = SamPredictor(sam) # SAM predictor
     predictor.set_image(img_rgb) # set image to predict on
@@ -108,13 +108,13 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
     mask = person_mask.astype(bool)
     masked_depth_values = depth_img[mask] # extract depth values in the mask
 
-    if masked_depth_values.size > 0: # compute basic depth metrics inside the mask for verification
-        print("min:", float(np.nanmin(masked_depth_values)))
-        print("max:", float(np.nanmax(masked_depth_values)))
-        print("mean:", float(np.nanmean(masked_depth_values)))
-        print("median:", float(np.nanmedian(masked_depth_values)))
-    else:
-        print("Mask contains no pixels (empty).")
+    # if masked_depth_values.size > 0: # compute basic depth metrics inside the mask for verification
+    #     print("min:", float(np.nanmin(masked_depth_values)))
+    #     print("max:", float(np.nanmax(masked_depth_values)))
+    #     print("mean:", float(np.nanmean(masked_depth_values)))
+    #     print("median:", float(np.nanmedian(masked_depth_values)))
+    # else:
+    #     print("Mask contains no pixels (empty).")
 
     depth_map = np.full_like(depth_img, np.nan, dtype=np.float32) #everything not in the mask is nan
     depth_map[mask] = depth_img[mask]
@@ -147,9 +147,9 @@ def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
     return depth_map
 
 # filter outliers 
-def filter_depth_outliers(depth_map):
-    fx_d, fy_d = 638.19, 638.19
-    cx_d, cy_d = 639.70, 356.18
+def filter_depth_outliers(depth_map, config):
+    fx_d, fy_d = config["camera"]["fx"], config["camera"]["fy"]
+    cx_d, cy_d = config["camera"]["cx"], config["camera"]["cy"]
     depth_map = depth_map / 1000.0
     depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
     H, W = depth_map.shape
@@ -174,7 +174,7 @@ def filter_depth_outliers(depth_map):
     return points
 
 # create the point cloud from depth data
-def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
+def create_point_cloud(filtered_depth_mask, file_name = None, visualize=False, save=False):
     paths, config = load_config(CONFIG_PATH)
     pcd = o3d.geometry.PointCloud() # create point cloud
     pcd.points = o3d.utility.Vector3dVector(filtered_depth_mask)
@@ -187,14 +187,16 @@ def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
         o3d.visualization.draw_geometries([person_point_cloud])
 
     if save:
-        o3d.io.write_point_cloud(paths["pt_cloud_ply_path"], person_point_cloud)
-        print("Point cloud saved at:", paths["pt_cloud_ply_path"])
+        if file_name:
+            point_cloud_path = f"/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/data/segmentation_point_cloud/{file_name}_pt_cloud.ply" 
+            o3d.io.write_point_cloud(point_cloud_path, person_point_cloud)
+            print("Point cloud saved at:", point_cloud_path)
 
     print("Point cloud created with shape:", np.asarray(person_point_cloud.points).shape)
 
     return person_point_cloud
 
-def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
+def run_pipeline(frame_rgb, depth_arr, config, file_name, visualize=False, save=False):
     print("Starting segmentation pipeline...")
     
     sam_checkpoint, device = download_sam()
@@ -206,13 +208,13 @@ def run_pipeline(frame_rgb, depth_arr, visualize=False, save=False):
     
     # 3) Overlay segmentation with depth
     depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
-    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask)
+    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask, config)
     
     # 4) Create point cloud
-    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
+    point_cloud = create_point_cloud(filtered_depth_mask, file_name=file_name, visualize=visualize, save=save)
     print("Finished processing point cloud")
 
-    return point_cloud, img_rgb, x1, y1, x2, y2
+    return point_cloud, img_rgb, person_segmentation_mask, x1, y1, x2, y2
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)

@@ -13,6 +13,8 @@ from modelling import utils
 import yaml
 import sys
 import torch
+import trimesh
+
 
 SAM3D_ROOT = "/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d"
 sys.path.insert(0, SAM3D_ROOT)
@@ -51,21 +53,20 @@ def init_sam3d(sam3d_ckpt, mhr_path, device):
     print("Returned the sam3d estimator")
     return estimator
 
-
-def create_pose_sam3d(img, x1, y1, x2, y2,estimator, device, visualize: bool = False): 
+def create_pose_sam3d(img, x1, y1, x2, y2, person_segmentation_mask, config, estimator, device, visualize: bool = False): 
     K = np.array([
-        [638.19, 0.0,638.19],
-        [0.0,639.70,246.72323964],
-        [0.0,0.0,356.18],
+        [config["camera"]["fx"], 0.0,config["camera"]["cx"]],
+        [0.0,config["camera"]["fy"],config["camera"]["cy"]],
+        [0.0,0.0,1.0],
     ], dtype=np.float32)
 
     cam_int = torch.tensor(K, dtype=torch.float32, device=device).unsqueeze(0)
     outputs = estimator.process_one_image(
         img,                 
         bboxes=np.array([[x1,y1,x2,y2]], dtype=np.float32),
-        masks=None,
+        masks=person_segmentation_mask,
         cam_int=cam_int,
-        use_mask=False,      
+        use_mask=True,      
         inference_type="body",
     )
     out0 = outputs[0]
@@ -230,13 +231,13 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: bool = True):
+def main(img_rgb, x1, y1, x2, y2, point_cloud, person_segmentation_mask, file_name: str = None,  visualize: bool = True, save: bool = True):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D
     print("Initializing SAM3D estimator...")
     sam3d_estimator = init_sam3d(paths["sam3d_model_checkpoint"], paths["mhr_model_checkpoint"], device)
-    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, sam3d_estimator, device)
+    verts = create_pose_sam3d(img_rgb, x1, y1, x2, y2, person_segmentation_mask, config, sam3d_estimator, device)
     sam_pcd = prealign_best(verts, point_cloud)
 
     if visualize:
@@ -245,8 +246,10 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
         o3d.visualization.draw_geometries([point_cloud, sam_pcd])
 
     if save:
-        o3d.io.write_point_cloud(paths["sam_pt_cloud_ply_path"], sam_pcd)
-        print("SAM point cloud saved at:", paths["sam_pt_cloud_ply_path"])
+        if file_name:
+            point_cloud_path = f"/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/data/sam_point_cloud/{file_name}_sam_pt_cloud.ply" 
+            o3d.io.write_point_cloud(point_cloud_path, sam_pcd)
+            print("SAM point cloud saved at:", point_cloud_path)
     print("SAM3D pose created. Proceeding to ICP alignment...")
 
     # 2) Run ICP registration
@@ -264,9 +267,13 @@ def main(img_rgb, x1, y1, x2, y2, point_cloud, visualize: bool = True, save: boo
         o3d.visualization.draw_geometries([point_cloud, mesh_aligned])
 
     # 3) Make watertight mesh 
-    watertight_mesh = utils.make_watertight_meshfix(mesh_aligned)
+    watertight_mesh = utils.make_watertight_meshfix(sam_mesh)
     
     if save:
-        o3d.io.write_triangle_mesh("sam3d_mesh_aligned.ply", watertight_mesh)
-    return watertight_mesh
+        if file_name:
+            mesh_path = f"/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/data/sam_mesh/{file_name}_sam_mesh.ply" 
+            o3d.io.write_triangle_mesh(mesh_path, watertight_mesh)
+            print("SAM mesh saved at:", mesh_path)
+
+    return sam_mesh
 
