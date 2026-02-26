@@ -8,11 +8,11 @@ paths:
   mhr_model_checkpoint: '/Users/mackenziesnyder/Desktop/Capstone/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
 
 camera:
-fx: 638.19
-fy: 639.70
-cx: 356.18
-cy: 246.72323964
+  fx: 615.70
+  fy: 615.71
+  cx: 330.00
+  cy: 239.04
 
 inputs:
   sex: "Female" # "Female" or "Male"
-  height: 160 # in cm, optional
+  height: 155 # in cm, optional
