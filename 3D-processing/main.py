@@ -83,8 +83,7 @@ if __name__ == "__main__":
     )
     filenames = data["rgb_path"].str.replace("_rgb.png", "")
     data["estimated_weight_batch_processing"] = None
-    print(filenames)
-    for i, (f, sex_i, height_i) in enumerate(zip(data["file_name"], data["sex"], data["height_cm"])):
+    for i, (f, sex_i, height_i) in enumerate(zip(filenames, data["sex"], data["height_cm"])):
         print("----------------------------------")
         print(f"processing {f}")
         weight = main(
