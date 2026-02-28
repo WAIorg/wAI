@@ -1,7 +1,9 @@
 def able_body_weight_formula(sex=str, volume=float, height=None):
-    if sex == "Female":
+    print(sex)
+    
+    if sex == "female":
         sex_weight = 2
-    elif sex == "Male":
+    elif sex == "male":
         sex_weight = 1
     else:
         raise ValueError("sex input must be MALE or FEMALE")

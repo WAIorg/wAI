@@ -14,5 +14,5 @@ camera:
   cy: 239.04
 
 inputs:
-  sex: "Female" # "Female" or "Male"
+  sex: "female" # "female" or "male"
   height: 155 # in cm, optional

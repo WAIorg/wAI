@@ -188,7 +188,7 @@ def create_point_cloud(filtered_depth_mask, file_name = None, visualize=False, s
 
     if save:
         if file_name:
-            point_cloud_path = f"/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/data/segmentation_point_cloud/{file_name}_pt_cloud.ply" 
+            point_cloud_path = f"/Users/mackenziesnyder/Desktop/Capstone/wAI/data/data_feb12/segmentation_point_cloud/{file_name}_pt_cloud.ply" 
             o3d.io.write_point_cloud(point_cloud_path, person_point_cloud)
             print("Point cloud saved at:", point_cloud_path)
 
