@@ -64,9 +64,10 @@ def main(file_name: str = None, sex: str = None, height: float = None, visualize
     vol = obj_to_volume.main(mesh)
     # 4) Weight estimation
     print("Weight using Open3D volume:")
-    weight_formula.able_body_weight_formula(sex=sex, volume=vol, height=height)
+    weight = weight_formula.able_body_weight_formula(sex=sex, volume=vol, height=height)
 
     print(f"Full pipeline completed in {time.time() - start_time:.2f} seconds.")
+    return weight
 
 
 if __name__ == "__main__":
@@ -80,10 +81,18 @@ if __name__ == "__main__":
         .str.strip()
         .astype(float)
     )
-
     filenames = data["rgb_path"].str.replace("_rgb.png", "")
+    data["estimated_weight_batch_processing"] = None
     print(filenames)
-    for f, sex_i, height_i in zip(filenames, data["sex"], data["height_cm"]):
+    for i, (f, sex_i, height_i) in enumerate(zip(data["file_name"], data["sex"], data["height_cm"])):
         print("----------------------------------")
         print(f"processing {f}")
-        main(file_name=f, sex=sex_i, height=height_i, visualize=False, save=True)
+        weight = main(
+            file_name=f,
+            sex=sex_i,
+            height=height_i,
+            visualize=False,
+            save=True,
+        )
+        data.loc[i, "estimated_weight_batch_processing"] = weight
+    data.to_csv("../data-collection-processing/captures_with_batch_weights.csv", index=False)
