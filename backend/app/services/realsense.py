@@ -159,19 +159,21 @@ class RealSenseService:
                 raise RuntimeError("No compatible depth stream found on RealSense device.")
             
             # Find a matching color and depth profile
-            # Prefer 640x480 @ 30fps if available, otherwise use first available
+            # Prefer a common, reliable mode (640x480 @ 30fps) if available.
+            # The previous 640x640 @ 4fps preference is uncommon and can cause timeouts
+            # depending on device model / USB bandwidth / driver.
             color_vp = None
             depth_vp = None
             
             for vp in color_profiles:
-                if vp.width() == 1280 and vp.height() == 720 and vp.fps() == 6:
+                if vp.width() == 640 and vp.height() == 480 and vp.fps() == 30:
                     color_vp = vp
                     break
             if not color_vp:
                 color_vp = color_profiles[0]
             
             for vp in depth_profiles:
-                if vp.width() == 1280 and vp.height() == 720 and vp.fps() == 6:
+                if vp.width() == 640 and vp.height() == 480 and vp.fps() == 30:
                     depth_vp = vp
                     break
             if not depth_vp:
@@ -234,7 +236,9 @@ class RealSenseService:
             frames_received = 0
             for i in range(60):  # Wait up to 2 seconds
                 try:
-                    frames = self._pipeline.wait_for_frames(timeout_ms=500)
+                    # Use a slightly longer timeout to avoid spurious warm-up failures,
+                    # especially on lower FPS modes or under transient USB load.
+                    frames = self._pipeline.wait_for_frames(timeout_ms=1500)
                     if frames:
                         frames_received += 1
                         if frames_received >= 5:  # Got a few frames, good enough

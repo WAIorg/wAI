@@ -130,6 +130,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 When on, shows detailed logs under the loading bar during processing.
               </p>
             </div>
+
+            {/* Refresh and Quit */}
+            <div className="flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-light-blue text-dark-blue font-semibold text-xl hover:bg-opacity-90 transition-colors"
+                aria-label="Refresh page"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh page
+              </button>
+              <button
+                type="button"
+                onClick={() => window.close()}
+                className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-gray-200 text-gray-800 font-semibold text-xl hover:bg-gray-300 transition-colors"
+                aria-label="Quit and close browser"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Quit
+              </button>
+            </div>
           </div>
         </div>
       </div>

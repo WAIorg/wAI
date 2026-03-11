@@ -2,7 +2,7 @@ import React from 'react'
 
 interface NumberPadProps {
   value: string
-  unit: 'cm' | 'in' | 'lbs'
+  unit: 'cm' | 'in' | 'lbs' | 'ft'
   title?: string
   onInput: (value: string) => void
   onClose: () => void

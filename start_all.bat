@@ -1,5 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
+REM Pass /startup to skip Edge launch and pause (used when combined script runs start_kiosk.ps1 after)
+if "%~1"=="/startup" set SKIP_EDGE=1& set SKIP_PAUSE=1
+
 echo ========================================
 echo Starting Backend and Interface Servers
 echo ========================================
@@ -53,6 +56,8 @@ echo Waiting for interface server to start (5 seconds)...
 timeout /t 5 /nobreak >nul
 echo Interface server should be running on http://localhost:5174
 echo.
+
+if defined SKIP_EDGE goto :skip_edge
 
 REM ========================================
 REM Step 3: Find Edge Executable
@@ -109,4 +114,18 @@ echo.
 echo Servers are running in separate windows.
 echo Close those windows to stop the servers.
 echo.
-pause
+goto :eof_pause
+
+:skip_edge
+echo [3/4] Skipping Edge (will be launched by start_kiosk.ps1)...
+echo.
+echo ========================================
+echo Servers are starting!
+echo ========================================
+echo Backend:  http://localhost:8000
+echo Interface: http://localhost:5174
+echo ========================================
+echo.
+
+:eof_pause
+if not defined SKIP_PAUSE pause

@@ -104,8 +104,19 @@ export const App: React.FC = () => {
     setProcessingResult(null)
     const captureStartTime = Date.now() / 1000 // Unix timestamp in seconds
     try {
-      // Format height with unit
-      const heightValue = height ? `${height} ${heightUnit}` : null
+      // Format height with unit, always storing height in cm for consistency
+      let heightValue: string | null = null
+      if (height) {
+        const numericHeight = parseFloat(height)
+        if (!isNaN(numericHeight)) {
+          if (heightUnit === 'in') {
+            const heightCm = numericHeight * 2.54
+            heightValue = `${heightCm.toFixed(2)} cm`
+          } else {
+            heightValue = `${numericHeight} cm`
+          }
+        }
+      }
       
       const res = await fetch(`${API_BASE}/realsense_capture/image`, {
         method: 'POST',
@@ -163,8 +174,14 @@ export const App: React.FC = () => {
     setProcessingStep('')
     setCurrentStep('data-processing') // Update progress indicator
     
-    // Extract numeric height if provided
-    const heightValue = height ? parseFloat(height) : null
+    // Extract numeric height in cm if provided
+    let heightValue: number | null = null
+    if (height) {
+      const numericHeight = parseFloat(height)
+      if (!isNaN(numericHeight)) {
+        heightValue = heightUnit === 'in' ? numericHeight * 2.54 : numericHeight
+      }
+    }
     
     try {
       const response = await fetch(`${API_BASE}/processing/run/stream`, {
@@ -277,6 +294,9 @@ export const App: React.FC = () => {
     setLastCapture(null) // Clear "Captured successfully" so new session starts fresh
     setHeight('') // Clear height input
     setSex('') // Clear sex input
+    if (!streamAutoOn) {
+      setStreamOnManual(false)
+    }
     setCurrentStep('imaging')
   }
 
