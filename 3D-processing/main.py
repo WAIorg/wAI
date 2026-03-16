@@ -36,7 +36,6 @@ def load_config(config_path: str):
 
 def main(
     rgb_path: str = None,
-    depth_path: str = None,
     sex: str = None,
     height: float = None,
     visualize: bool = True,
@@ -54,7 +53,6 @@ def main(
     
     # Use provided paths or fall back to config
     rgb_img_path = rgb_path or paths["rgb_img_path"]
-    depth_img_path = depth_path or paths["depth_img_path"]
     
     # Use provided inputs or fall back to config
     sex_value = sex or config["inputs"]["sex"]
@@ -63,9 +61,8 @@ def main(
     # 1) Segmentation pipeline (0-50%)
     if progress_callback:
         progress_callback(5, "Starting segmentation pipeline...")
-    point_cloud, img_rgb, person_segmentation_mask, x1, y1, x2, y2 = segmentation_script.run_pipeline(
+    img_rgb, person_segmentation_mask, x1, y1, x2, y2 = segmentation_script.run_pipeline(
         frame_rgb=rgb_img_path, 
-        depth_arr=depth_img_path,
         config=config,
         visualize=visualize, 
         save=save,
@@ -77,7 +74,7 @@ def main(
         progress_callback(50, "Starting 3D modelling pipeline...")
     mesh = modelling_script.main(
         img_rgb=img_rgb, x1=x1, y1=y1, x2=x2, 
-        y2=y2, point_cloud=point_cloud, person_segmentation_mask=person_segmentation_mask,
+        y2=y2, person_segmentation_mask=person_segmentation_mask,
         visualize=visualize, save=save,
         progress_callback=lambda p, m: progress_callback(50 + p * 0.35, m) if progress_callback else None
         )

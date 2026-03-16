@@ -142,100 +142,7 @@ def person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=False
 
     return person_segmentation
 
-# overlay segmentation with depth
-def overlay_segmentation_with_depth(depth_img, person_mask, visualize=False):
-    depth_img = np.load(depth_img)
-    mask = person_mask.astype(bool)
-    masked_depth_values = depth_img[mask] # extract depth values in the mask
-
-    if masked_depth_values.size > 0: # compute basic depth metrics inside the mask for verification
-        print("min:", float(np.nanmin(masked_depth_values)))
-        print("max:", float(np.nanmax(masked_depth_values)))
-        print("mean:", float(np.nanmean(masked_depth_values)))
-        print("median:", float(np.nanmedian(masked_depth_values)))
-    else:
-        print("Mask contains no pixels (empty).")
-
-    depth_map = np.full_like(depth_img, np.nan, dtype=np.float32) #everything not in the mask is nan
-    depth_map[mask] = depth_img[mask]
-
-    print(f"Depth map successfully overlaid")
-
-    if visualize:
-        # display
-        depth_vis = depth_img.copy().astype(np.float32)
-        depth_norm = cv2.normalize(depth_vis, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        depth_colormap = cv2.applyColorMap(depth_norm, cv2.COLORMAP_JET)
-        plt.figure(figsize=(8, 6))
-        plt.imshow(depth_colormap)
-        plt.axis('off')
-        plt.title("Depth colormap")
-        plt.show()
-    
-        overlay_color = np.zeros_like(depth_colormap) # create colored mask overlay - purpleish
-        overlay_color[mask] = (255, 0, 255)                     
-        alpha = 0.5                                         
-        blended = depth_colormap.copy() # blend only where mask is true
-        blended[mask] = cv2.addWeighted(depth_colormap[mask], 1 - alpha, overlay_color[mask], alpha, 0)
-        blended_rgb = cv2.cvtColor(blended, cv2.COLOR_BGR2RGB) # convert to rgb
-        plt.figure(figsize=(8, 6))
-        plt.imshow(blended_rgb)
-        plt.axis('off')
-        plt.title("Depth colormap with segmentation overlay (red, 50% on mask)")
-        plt.show()
-
-    return depth_map
-
-# filter outliers 
-def filter_depth_outliers(depth_map, config):
-    fx_d, fy_d = config["camera"]["fx"], config["camera"]["fy"]
-    cx_d, cy_d = config["camera"]["cx"], config["camera"]["cy"]
-    depth_map = depth_map / 1000.0
-    depth_map = np.nan_to_num(depth_map, nan=0.0) # replace nans with 0
-    H, W = depth_map.shape
-    print(H, W)
-
-    u = np.arange(W) # create pixel grid
-    v = np.arange(H)
-    u, v = np.meshgrid(u, v)
-    u_flat = u.flatten() # flatten arrays
-    v_flat = v.flatten()
-    z_flat = depth_map.flatten()
-    valid = z_flat > 0 # keep only non-zero
-    u_valid = u_flat[valid]
-    v_valid = v_flat[valid]
-    z_valid = z_flat[valid]
-
-    # convert pixel coordinates to metric camera coordinates
-    X = (u_valid - cx_d) * z_valid / fx_d
-    Y = (v_valid - cy_d) * z_valid / fy_d
-    Z = z_valid
-    points = np.stack([X, -Y, Z], axis=-1) # flip orienation for visuals
-
-    return points
-
-# create the point cloud from depth data
-def create_point_cloud(filtered_depth_mask, visualize=False, save=False):
-    paths, config = load_config(CONFIG_PATH)
-    pcd = o3d.geometry.PointCloud() # create point cloud
-    pcd.points = o3d.utility.Vector3dVector(filtered_depth_mask)
-    labels = np.array(pcd.cluster_dbscan(eps=0.025, min_points=20)) # remove floating blobs
-    largest_label = np.bincount(labels[labels >= 0]).argmax() # keep largest blob (person)
-    person_point_cloud = pcd.select_by_index(np.where(labels == largest_label)[0])
-
-    if visualize:
-        # visualize
-        o3d.visualization.draw_geometries([person_point_cloud])
-
-    if save:
-        o3d.io.write_point_cloud(paths["pt_cloud_ply_path"], person_point_cloud)
-        print("Point cloud saved at:", paths["pt_cloud_ply_path"])
-
-    print("Point cloud created with shape:", np.asarray(person_point_cloud.points).shape)
-
-    return person_point_cloud
-
-def run_pipeline(frame_rgb, depth_arr, config, visualize=False, save=False, progress_callback=None):
+def run_pipeline(frame_rgb, config, visualize=False, save=False, progress_callback=None):
     print("Starting segmentation pipeline...")
     if progress_callback:
         progress_callback(0, "Starting segmentation pipeline...")
@@ -256,25 +163,12 @@ def run_pipeline(frame_rgb, depth_arr, config, visualize=False, save=False, prog
     person_segmentation_mask = person_segmentation(img_rgb, x1, y1, x2, y2, sam_checkpoint, visualize=visualize)
     
     if progress_callback:
-        progress_callback(30, "Overlaying segmentation with depth data...")
-    # 3) Overlay segmentation with depth
-    depth_segmentation_mask = overlay_segmentation_with_depth(depth_arr, person_segmentation_mask, visualize=visualize)
-    filtered_depth_mask = filter_depth_outliers(depth_segmentation_mask, config)
-    
-    if progress_callback:
-        progress_callback(40, "Creating point cloud from depth data...")
-    # 4) Create point cloud
-    point_cloud = create_point_cloud(filtered_depth_mask, visualize=visualize, save=save)
-    print("Finished processing point cloud")
-    
-    if progress_callback:
         progress_callback(50, "Segmentation complete")
 
-    return point_cloud, img_rgb, person_segmentation_mask, x1, y1, x2, y2
+    return img_rgb, person_segmentation_mask, x1, y1, x2, y2
 
 if __name__ == "__main__":
     paths, config = load_config(CONFIG_PATH)
     frame_rgb=paths["rgb_img_path"]
-    depth_arr=paths["depth_img_path"]
     paths, config = load_config(CONFIG_PATH)
-    point_cloud = run_pipeline(frame_rgb, depth_arr, config, True)
+    img_rgb, person_segmentation_mask, x1, y1, x2, y2 = run_pipeline(frame_rgb, config, True)
