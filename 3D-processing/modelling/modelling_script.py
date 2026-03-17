@@ -90,7 +90,18 @@ def get_mesh(verts, faces):
     mesh = utils.clean_mesh(mesh)
     return mesh
 
-def main(img_rgb, x1, y1, x2, y2, point_cloud, person_segmentation_mask, visualize: bool = True, save: bool = True, progress_callback=None):
+def main(
+    img_rgb,
+    x1,
+    y1,
+    x2,
+    y2,
+    point_cloud=None,
+    person_segmentation_mask=None,
+    visualize: bool = True,
+    save: bool = True,
+    progress_callback=None,
+):
     paths, config = load_config(CONFIG_PATH)
 
     # 1) Run SAM3D

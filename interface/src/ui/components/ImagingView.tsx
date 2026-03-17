@@ -32,41 +32,65 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
 }) => {
   const [showNumberPad, setShowNumberPad] = useState(false)
   const [tempHeight, setTempHeight] = useState(height)
-  const [feet, setFeet] = useState('')
-  const [inches, setInches] = useState('')
-  const [activeHeightField, setActiveHeightField] = useState<'single' | 'feet' | 'inches'>('single')
+  const [ftInRaw, setFtInRaw] = useState('')
+  const [captureAttempted, setCaptureAttempted] = useState(false)
   const [showSexError, setShowSexError] = useState(false)
 
-  // Synchronize feet/inches fields from total height when using inches
+  const parseFtInRaw = (raw: string) => {
+    const digitsOnly = raw.replace(/[^\d]/g, '')
+    if (!digitsOnly) return { raw: '', feetStr: '', inchesStr: '' }
+    if (digitsOnly.length === 1) {
+      return { raw: digitsOnly, feetStr: digitsOnly, inchesStr: '' }
+    }
+    if (digitsOnly.length === 2) {
+      return { raw: digitsOnly, feetStr: digitsOnly.slice(0, 1), inchesStr: digitsOnly.slice(1) }
+    }
+    return {
+      raw: digitsOnly,
+      feetStr: digitsOnly.slice(0, -2),
+      inchesStr: digitsOnly.slice(-2),
+    }
+  }
+
+  const normalizeFeetInches = (feetStr: string, inchesStr: string) => {
+    const feetVal = parseInt(feetStr || '0', 10) || 0
+    const inchesValRaw = parseInt(inchesStr || '0', 10) || 0
+    if (feetVal <= 0 && inchesValRaw <= 0) {
+      return { feetVal: 0, inchesVal: 0, totalInches: 0 }
+    }
+    // Keep inches in [0, 11] by carrying overflow into feet.
+    const carryFeet = Math.floor(inchesValRaw / 12)
+    const inchesVal = inchesValRaw % 12
+    const normalizedFeet = feetVal + carryFeet
+    const totalInches = normalizedFeet * 12 + inchesVal
+    return { feetVal: normalizedFeet, inchesVal, totalInches }
+  }
+
+  // Synchronize display raw string from total height when using inches
   useEffect(() => {
     if (heightUnit === 'in') {
       const totalInches = parseFloat(height)
       if (!isNaN(totalInches) && totalInches > 0) {
-        const wholeFeet = Math.floor(totalInches / 12)
-        const remainingInches = totalInches - wholeFeet * 12
-        setFeet(wholeFeet > 0 ? String(wholeFeet) : '')
-        const roundedInches = parseFloat(remainingInches.toFixed(2))
-        setInches(roundedInches > 0 ? String(roundedInches) : '')
+        let wholeFeet = Math.floor(totalInches / 12)
+        let remainingInches = Math.round(totalInches - wholeFeet * 12)
+        if (remainingInches >= 12) {
+          wholeFeet += 1
+          remainingInches -= 12
+        }
+        const raw = `${wholeFeet}${String(remainingInches).padStart(2, '0')}`
+        setFtInRaw(raw)
       } else {
-        setFeet('')
-        setInches('')
+        setFtInRaw('')
       }
     } else {
-      setFeet('')
-      setInches('')
+      setFtInRaw('')
     }
   }, [height, heightUnit])
 
   const handleNumberPadClose = () => {
     setShowNumberPad(false)
     if (heightUnit === 'in') {
-      if (activeHeightField === 'feet') {
-        setTempHeight(feet)
-      } else if (activeHeightField === 'inches') {
-        setTempHeight(inches)
-      } else {
-        setTempHeight(height)
-      }
+      setTempHeight(ftInRaw)
     } else {
       setTempHeight(height)
     }
@@ -74,23 +98,14 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
 
   const handleNumberPadConfirm = () => {
     if (heightUnit === 'in') {
-      if (activeHeightField === 'feet') {
-        const newFeet = tempHeight
-        setFeet(newFeet)
-        const feetVal = parseFloat(newFeet || '0') || 0
-        const inchesVal = parseFloat(inches || '0') || 0
-        const totalInches = feetVal * 12 + inchesVal
-        onHeightChange(totalInches > 0 ? String(totalInches) : '')
-      } else if (activeHeightField === 'inches') {
-        const newInches = tempHeight
-        setInches(newInches)
-        const feetVal = parseFloat(feet || '0') || 0
-        const inchesVal = parseFloat(newInches || '0') || 0
-        const totalInches = feetVal * 12 + inchesVal
-        onHeightChange(totalInches > 0 ? String(totalInches) : '')
-      } else {
-        onHeightChange(tempHeight)
-      }
+      const parsed = parseFtInRaw(tempHeight)
+      const normalized = normalizeFeetInches(parsed.feetStr, parsed.inchesStr)
+      const rebuiltRaw =
+        normalized.totalInches > 0
+          ? `${normalized.feetVal}${String(normalized.inchesVal).padStart(2, '0')}`
+          : ''
+      setFtInRaw(rebuiltRaw)
+      onHeightChange(normalized.totalInches > 0 ? String(normalized.totalInches) : '')
     } else {
       onHeightChange(tempHeight)
     }
@@ -98,10 +113,13 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
   }
 
   const handleCaptureClick = () => {
-    if (!sex) {
-      setShowSexError(true)
-      // Hide error after 3 seconds
-      setTimeout(() => setShowSexError(false), 3000)
+    const heightVal = parseFloat(height)
+    const hasHeight = !isNaN(heightVal) && heightVal > 0
+    const hasSex = Boolean(sex)
+
+    if (!hasSex || !hasHeight) {
+      setCaptureAttempted(true)
+      setShowSexError(!hasSex)
       return
     }
     setShowSexError(false)
@@ -114,6 +132,18 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
       setShowSexError(false)
     }
   }, [sex])
+
+  // If user fixes missing fields after attempting capture, clear the inline warnings.
+  useEffect(() => {
+    if (!captureAttempted) return
+    const heightVal = parseFloat(height)
+    const hasHeight = !isNaN(heightVal) && heightVal > 0
+    const hasSex = Boolean(sex)
+    if (hasSex && hasHeight) {
+      setCaptureAttempted(false)
+      setShowSexError(false)
+    }
+  }, [captureAttempted, height, sex])
   return (
     <div className="w-full max-w-6xl">
       <div className="flex gap-24 items-start justify-center w-full max-w-7xl">
@@ -192,7 +222,8 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
           {/* Sex Input */}
           <div>
             <label className="block text-dark-blue mb-6 text-3xl font-semibold">
-              Sex <span className="text-red-500 ml-3">required</span>
+              Sex
+              {captureAttempted && !sex && <span className="text-red-500 ml-3">required</span>}
             </label>
             <div className="flex gap-16">
               <label className="flex items-center gap-5 cursor-pointer touch-manipulation">
@@ -256,55 +287,75 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
 
           {/* Height Input */}
           <div>
-            <label className="block text-dark-blue mb-6 text-3xl font-semibold">Height</label>
+            <label className="block text-dark-blue mb-6 text-3xl font-semibold">
+              Height
+              {(() => {
+                const heightVal = parseFloat(height)
+                const hasHeight = !isNaN(heightVal) && heightVal > 0
+                return captureAttempted && !hasHeight ? <span className="text-red-500 ml-3">required</span> : null
+              })()}
+            </label>
             <div className="flex gap-5">
               {heightUnit === 'cm' ? (
-                <input
-                  type="text"
-                  inputMode="none"
-                  readOnly
-                  value={height}
-                  onClick={() => {
-                    setActiveHeightField('single')
-                    setTempHeight(height)
-                    setShowNumberPad(true)
-                  }}
-                  placeholder="Tap to enter"
-                  className="flex-1 px-7 py-7 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent cursor-pointer text-3xl touch-manipulation"
-                />
+                <div className="flex-1">
+                  <div
+                    className={`flex items-center px-7 py-7 border-2 rounded-xl focus-within:ring-4 focus-within:ring-light-blue focus-within:border-transparent bg-white text-3xl touch-manipulation ${
+                      captureAttempted && !(parseFloat(height) > 0) ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="text"
+                      inputMode="none"
+                      readOnly
+                      value={height ? `${height} cm` : ''}
+                      onClick={() => {
+                        setTempHeight(height)
+                        setShowNumberPad(true)
+                      }}
+                      placeholder="Tap to enter"
+                      className="flex-1 min-w-0 outline-none bg-transparent cursor-pointer"
+                      aria-label="Height in centimeters"
+                    />
+                  </div>
+                </div>
               ) : (
-                <div className="flex gap-4 flex-1">
-                  <input
-                    type="text"
-                    inputMode="none"
-                    readOnly
-                    value={feet}
-                    onClick={() => {
-                      setActiveHeightField('feet')
-                      setTempHeight(feet)
-                      setShowNumberPad(true)
-                    }}
-                    placeholder="Ft"
-                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent cursor-pointer text-2xl touch-manipulation"
-                  />
-                  <input
-                    type="text"
-                    inputMode="none"
-                    readOnly
-                    value={inches}
-                    onClick={() => {
-                      setActiveHeightField('inches')
-                      setTempHeight(inches)
-                      setShowNumberPad(true)
-                    }}
-                    placeholder="In"
-                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent cursor-pointer text-2xl touch-manipulation"
-                  />
+                <div className="flex-1">
+                  <div
+                    className={`flex items-center px-7 py-7 border-2 rounded-xl focus-within:ring-4 focus-within:ring-light-blue focus-within:border-transparent bg-white text-3xl touch-manipulation ${
+                      captureAttempted && !(parseFloat(height) > 0) ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="text"
+                      inputMode="none"
+                      readOnly
+                      value={(() => {
+                        const { feetStr, inchesStr } = parseFtInRaw(ftInRaw)
+                        if (!feetStr && !inchesStr) return ''
+                        const normalized = normalizeFeetInches(feetStr, inchesStr)
+                        return `${normalized.feetVal} ft ${normalized.inchesVal} in`
+                      })()}
+                      onClick={() => {
+                        setTempHeight(ftInRaw)
+                        setShowNumberPad(true)
+                      }}
+                      placeholder="Tap to enter"
+                      className="flex-1 min-w-0 outline-none bg-transparent cursor-pointer"
+                      aria-label="Height in feet and inches"
+                    />
+                  </div>
                 </div>
               )}
               <select
                 value={heightUnit}
-                onChange={(e) => onHeightUnitChange(e.target.value as 'cm' | 'in')}
+                onChange={(e) => {
+                  const nextUnit = e.target.value as 'cm' | 'in'
+                  // Clear height when switching units so users always start fresh.
+                  setTempHeight('')
+                  setFtInRaw('')
+                  onHeightChange('')
+                  onHeightUnitChange(nextUnit)
+                }}
                 className="px-7 py-7 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-light-blue focus:border-transparent bg-white text-3xl touch-manipulation w-[150px]"
                 style={{ minWidth: '150px' }}
               >
@@ -318,9 +369,9 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
           <div className="mt-6">
             <button
               onClick={handleCaptureClick}
-              disabled={busy || !sex}
+              disabled={busy}
               className={`w-full px-8 py-7 rounded-2xl transition-colors flex items-center justify-center gap-4 shadow-2xl touch-manipulation ${
-                busy || !sex
+                busy
                   ? 'bg-gray-400 cursor-not-allowed text-white'
                   : 'bg-light-blue hover:bg-dark-blue text-white'
               }`}
@@ -347,9 +398,6 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
               </svg>
               <span className="text-4xl font-bold">Capture Image</span>
             </button>
-            {showSexError && !sex && (
-              <p className="text-lg text-red-500 font-semibold mt-4 text-center">Please select a sex</p>
-            )}
             {lastCapture && (
               <div className="text-lg text-dark-blue text-center mt-4">
                 <p className="font-semibold text-green-600 text-xl">✓ Captured successfully!</p>
@@ -370,21 +418,29 @@ export const ImagingView: React.FC<ImagingViewProps> = ({
         <NumberPad
           value={tempHeight}
           unit={
-            heightUnit === 'in'
-              ? activeHeightField === 'feet'
-                ? 'ft'
-                : 'in'
-              : heightUnit
+            heightUnit === 'in' ? 'ft' : heightUnit
           }
           title={
+            heightUnit === 'in' ? 'Enter height (ft/in)' : undefined
+          }
+          displayNode={
             heightUnit === 'in'
-              ? activeHeightField === 'feet'
-                ? 'Enter feet'
-                : activeHeightField === 'inches'
-                  ? 'Enter inches'
-                  : undefined
+              ? (() => {
+                  const digitsOnly = tempHeight.replace(/[^\d]/g, '')
+                  const parsed = parseFtInRaw(digitsOnly)
+                  const normalized = normalizeFeetInches(parsed.feetStr, parsed.inchesStr)
+                  return (
+                    <span className="flex items-baseline gap-3">
+                      <span>{normalized.feetVal}</span>
+                      <span className="text-3xl text-dark-blue font-normal opacity-60">ft</span>
+                      <span>{normalized.inchesVal}</span>
+                      <span className="text-3xl text-dark-blue font-normal opacity-60">in</span>
+                    </span>
+                  )
+                })()
               : undefined
           }
+          showUnit={heightUnit !== 'in'}
           onInput={setTempHeight}
           onClose={handleNumberPadClose}
           onConfirm={handleNumberPadConfirm}

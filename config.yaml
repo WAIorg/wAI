@@ -17,3 +17,8 @@ camera:
 inputs:
   sex: "Female" # "Female" or "Male"
   height: 155 # in cm, optional
+
+# Standard deviation for the final weight estimate, expressed as a percentage of the final weight.
+weight_std_dev_percent:
+  Female: 7.04
+  Male: 7.64
