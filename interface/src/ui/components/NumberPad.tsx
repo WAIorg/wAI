@@ -4,6 +4,9 @@ interface NumberPadProps {
   value: string
   unit: 'cm' | 'in' | 'lbs' | 'ft'
   title?: string
+  displayValue?: string
+  displayNode?: React.ReactNode
+  showUnit?: boolean
   onInput: (value: string) => void
   onClose: () => void
   onConfirm: () => void
@@ -13,6 +16,9 @@ export const NumberPad: React.FC<NumberPadProps> = ({
   value,
   unit,
   title,
+  displayValue,
+  displayNode,
+  showUnit = true,
   onInput,
   onClose,
   onConfirm,
@@ -64,8 +70,10 @@ export const NumberPad: React.FC<NumberPadProps> = ({
         {/* Display */}
         <div className="p-8 bg-gray-50">
           <div className="text-5xl font-bold text-dark-blue text-center py-6 bg-white rounded-lg border-2 border-light-blue flex items-center justify-center gap-3 relative">
-            <span>{value || '0'}</span>
-            <span className="text-3xl text-dark-blue font-normal opacity-60">{unit}</span>
+            <span>{displayNode ?? displayValue ?? (value || '0')}</span>
+            {showUnit && (
+              <span className="text-3xl text-dark-blue font-normal opacity-60">{unit}</span>
+            )}
             {value && (
               <button
                 onClick={handleClear}

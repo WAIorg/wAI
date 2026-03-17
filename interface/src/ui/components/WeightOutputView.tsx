@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 interface WeightOutputViewProps {
   weight: number
+  stdDevKg?: number
   onTakeAnotherPhoto: () => void
   audioCueEnabled?: boolean
 }
@@ -20,6 +21,7 @@ function playAlertLouder() {
 
 export const WeightOutputView: React.FC<WeightOutputViewProps> = ({
   weight,
+  stdDevKg = 0,
   onTakeAnotherPhoto,
   audioCueEnabled = true,
 }) => {
@@ -35,10 +37,10 @@ export const WeightOutputView: React.FC<WeightOutputViewProps> = ({
   // Ensure weight is valid
   const weightInKg = weight && weight > 0 ? weight : 0
   const weightInLbs = weightInKg * 2.20462
-  const errorMargin = 5 // kg error margin
+  const stdDevInKg = stdDevKg && stdDevKg > 0 ? stdDevKg : 0
   
   const displayWeight = unit === 'kg' ? weightInKg : weightInLbs
-  const displayError = unit === 'kg' ? errorMargin : errorMargin * 2.20462
+  const displayError = unit === 'kg' ? stdDevInKg : stdDevInKg * 2.20462
   const displayUnit = unit
 
   return (
@@ -102,7 +104,7 @@ export const WeightOutputView: React.FC<WeightOutputViewProps> = ({
         {/* Disclaimer Text */}
         <div className="max-w-4xl mx-auto px-4">
           <p className="text-xs sm:text-sm lg:text-base text-gray-600 text-center leading-relaxed">
-            * The photo you acquired resulted in the above total body weight. This system can reliably report the total body weight within a possible error range of {errorMargin} kg.
+            * The photo you acquired resulted in the above total body weight. This system can reliably report the total body weight within a possible error range of {displayError.toFixed(0)} {displayUnit}.
           </p>
         </div>
       </div>
