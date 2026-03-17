@@ -6,7 +6,7 @@ Run full wAI software pipeline:
 4) Estimates weight from volume
 """
 
-from modelling import obj_to_volume, modelling_script
+from modelling import modelling_script
 from weight_calculation import weight_formula
 from segmentation import segmentation_script
 import yaml
@@ -36,6 +36,7 @@ def load_config(config_path: str):
 
 def main(
     rgb_path: str = None,
+    depth_path: str = None,
     sex: str = None,
     height: float = None,
     visualize: bool = True,

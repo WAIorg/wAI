@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 from typing import Optional, Tuple, Generator
 from contextlib import redirect_stdout, redirect_stderr
+import yaml
 
 # Add 3D-processing to path so we can import it
 # From backend/app/services/processing.py, go up 3 levels to reach repo root
@@ -52,6 +53,36 @@ def get_processing_pipeline():
 
 # Store the function reference
 _run_processing_pipeline = None
+
+_config_cache = None
+
+def get_repo_config() -> dict:
+    """Load repo-level config.yaml once (best-effort)."""
+    global _config_cache
+    if _config_cache is not None:
+        return _config_cache
+    config_path = REPO_ROOT / "config.yaml"
+    try:
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                _config_cache = yaml.safe_load(f) or {}
+        else:
+            _config_cache = {}
+    except Exception:
+        _config_cache = {}
+    return _config_cache
+
+def get_weight_std_dev_percent(sex_normalized: Optional[str]) -> Optional[float]:
+    cfg = get_repo_config()
+    std_cfg = (cfg or {}).get("weight_std_dev_percent", {}) or {}
+    if not sex_normalized:
+        return None
+    # sex_normalized is typically "Female" or "Male"
+    val = std_cfg.get(sex_normalized)
+    try:
+        return float(val) if val is not None else None
+    except Exception:
+        return None
 
 def run_processing_pipeline(*args, **kwargs):
     """Wrapper that lazily loads the processing pipeline."""
@@ -292,7 +323,6 @@ def run_3d_processing(
             # Run the processing pipeline with progress callback
             result = run_processing_pipeline(
                 rgb_path=rgb_path,
-                depth_path=depth_path,
                 sex=sex_normalized,
                 height=height,
                 visualize=False,
@@ -321,12 +351,27 @@ def run_3d_processing(
                 estimated_weight_kg=result.get("weight", 0)
             )
         
-        return {
+        response = {
             "success": True,
             "rgb_path": rgb_path,
             "depth_path": depth_path,
             **result
         }
+
+        # Compute std deviation (kg) from config percent and final weight.
+        weight_kg = response.get("weight")
+        std_percent = get_weight_std_dev_percent(sex_normalized)
+        if weight_kg is not None and std_percent is not None:
+            try:
+                weight_kg_f = float(weight_kg)
+                std_percent_f = float(std_percent)
+                if weight_kg_f > 0 and std_percent_f >= 0:
+                    response["std_dev_percent"] = std_percent_f
+                    response["std_dev_kg"] = (std_percent_f / 100.0) * weight_kg_f
+            except Exception:
+                pass
+
+        return response
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()

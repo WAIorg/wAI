@@ -24,6 +24,8 @@ class ProcessingResponse(BaseModel):
     depth_path: Optional[str] = None
     volume: Optional[float] = None
     weight: Optional[float] = None
+    std_dev_kg: Optional[float] = None
+    std_dev_percent: Optional[float] = None
     sex: Optional[str] = None
     height: Optional[float] = None
     error: Optional[str] = None

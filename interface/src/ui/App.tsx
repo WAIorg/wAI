@@ -39,6 +39,8 @@ export const App: React.FC = () => {
     success: boolean
     volume?: number
     weight?: number
+    std_dev_kg?: number
+    std_dev_percent?: number
     sex?: string
     height?: number
     error?: string
@@ -328,6 +330,7 @@ export const App: React.FC = () => {
         // Weight output view
         <WeightOutputView
           weight={processingResult.weight || 0}
+          stdDevKg={processingResult.std_dev_kg || 0}
           onTakeAnotherPhoto={handleTakeAnotherPhoto}
           audioCueEnabled={audioCueEnabled}
         />
