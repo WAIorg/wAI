@@ -9,6 +9,7 @@ Run full wAI software pipeline:
 from modelling import obj_to_volume, modelling_script
 from weight_calculation import weight_formula
 from segmentation import segmentation_script
+from bias_correction import bias_correction
 import yaml
 import trimesh
 import pymeshfix
@@ -58,7 +59,7 @@ def main(
     sex_value = sex or config["inputs"]["sex"]
     height_value = height or config["inputs"]["height"]
     
-    # 1) Segmentation pipeline (0-50%)
+    # 1) Segmentation pipeline (0-40%)
     if progress_callback:
         progress_callback(5, "Starting segmentation pipeline...")
     img_rgb, person_segmentation_mask, x1, y1, x2, y2 = segmentation_script.run_pipeline(
@@ -66,28 +67,29 @@ def main(
         config=config,
         visualize=visualize, 
         save=save,
-        progress_callback=lambda p, m: progress_callback(5 + p * 0.45, m) if progress_callback else None
+        progress_callback=lambda p, m: progress_callback(5 + p * 0.35, m) if progress_callback else None
         )
     
-    # 2) Modelling pipeline (50-85%)
+    # 2) Modelling pipeline (40-75%)
     if progress_callback:
-        progress_callback(50, "Starting 3D modelling pipeline...")
+        progress_callback(40, "Starting 3D modelling pipeline...")
+
     mesh = modelling_script.main(
         img_rgb=img_rgb, x1=x1, y1=y1, x2=x2, 
         y2=y2, person_segmentation_mask=person_segmentation_mask,
         visualize=visualize, save=save,
-        progress_callback=lambda p, m: progress_callback(50 + p * 0.35, m) if progress_callback else None
+        progress_callback=lambda p, m: progress_callback(40 + p * 0.35, m) if progress_callback else None
         )
 
-    # 3) Volume calculation (85-90%)
+    # 3) Volume calculation (75-85%)
     if progress_callback:
-        progress_callback(85, "Calculating volume...")
+        progress_callback(75, "Calculating volume...")
     vol = mesh.get_volume() * 1000
     print(f"Volume: {vol} cm³")
 
-    # 4) Weight estimation (90-100%)
+    # 4) Weight estimation (85-95%)
     if progress_callback:
-        progress_callback(90, "Estimating weight...")
+        progress_callback(85, "Estimating weight...")
     print("Weight using Open3D volume:")
     weight_result = weight_formula.able_body_weight_formula(
         sex=sex_value, 
@@ -95,12 +97,23 @@ def main(
         height=height_value
     )
     
+    # 5) Bias Correction (95-100%)
+    if progress_callback:
+        progress_callback(85, "Applying Bias Correction ...")
+
+    final_weight = bias_correction.apply_bias_correction(
+        configs=config,
+        weight=weight_result,
+        sex=sex_value,
+        height=height_value
+    )
+
     if progress_callback:
         progress_callback(100, "Processing complete!")
     
     return {
         "volume": vol,
-        "weight": weight_result,
+        "weight": final_weight,
         "sex": sex_value,
         "height": height_value
     }

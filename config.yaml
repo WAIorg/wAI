@@ -6,6 +6,7 @@ paths:
   sam_pt_cloud_ply_path: "C:/Users/wai/wAI/data/sam_point_cloud.ply"
   sam3d_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/model.ckpt'
   mhr_model_checkpoint: 'C:/Users/wai/wAI/3D-processing/modelling/sam-3d-body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'
+  bias_correction_model: '/Users/adeleyounis/Desktop/Capstone/wAI/3D-processing/bias_correction/bias_correction_model.pkl'
 
 camera:
   fx: 615.70
@@ -16,3 +17,7 @@ camera:
 inputs:
   sex: "Female" # "Female" or "Male"
   height: 155 # in cm, optional
+
+std:
+  female: 7.039 # 7.039%
+  male: 7.642 # 7.642%
