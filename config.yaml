@@ -17,7 +17,3 @@ camera:
 inputs:
   sex: "Female" # "Female" or "Male"
   height: 155 # in cm, optional
-
-std:
-  female: 7.039 # 7.039%
-  male: 7.642 # 7.642%
